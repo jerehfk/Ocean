@@ -51,3 +51,10 @@ crashlytics-build.properties
 # Betriebssystem
 .DS_Store
 Thumbs.db
+
+# Von „Ocean → Welt aufbauen“ erzeugte Modelle (groß, jederzeit neu erzeugbar).
+# Nach dem Klonen einmal „Ocean → Welt aufbauen“ ausführen.
+/Assets/Generiert/Inselstueck.asset*
+/Assets/Generiert/Meeresboden.asset*
+/Assets/Generiert/Wasser.asset*
+/Assets/Generiert/Palme_*.asset*
