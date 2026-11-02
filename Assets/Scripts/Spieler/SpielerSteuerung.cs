@@ -67,11 +67,9 @@ namespace Ocean
 
         void Update()
         {
-            // Escape gibt die Maus frei, Klick fängt sie wieder
+            // Esc öffnet/schließt das Pausemenü (Maus frei = Pause)
             if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
-                Cursor.lockState = CursorLockMode.None;
-            if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
-                Cursor.lockState = CursorLockMode.Locked;
+                Cursor.lockState = Cursor.lockState == CursorLockMode.Locked ? CursorLockMode.None : CursorLockMode.Locked;
 
             if (Cursor.lockState == CursorLockMode.Locked)
             {
@@ -81,7 +79,7 @@ namespace Ocean
                 kamera.localRotation = Quaternion.Euler(neigung, 0f, 0f);
             }
 
-            if (springen.WasPressedThisFrame()) sprungGewuenscht = true;
+            if (springen.WasPressedThisFrame() && Cursor.lockState == CursorLockMode.Locked) sprungGewuenscht = true;
         }
 
         void FixedUpdate()
@@ -105,7 +103,8 @@ namespace Ocean
             Vector3 waagerecht = v - senkrecht;
 
             // 4. Gewünschte Laufrichtung aus der Blickrichtung
-            Vector2 eingabe = bewegen.ReadValue<Vector2>();
+            // Im Pausemenü keine Bewegung (die Welt läuft im Mehrspieler aber weiter)
+            Vector2 eingabe = Cursor.lockState == CursorLockMode.Locked ? bewegen.ReadValue<Vector2>() : Vector2.zero;
             Vector3 vor = Vector3.ProjectOnPlane(blick.forward, oben).normalized;
             Vector3 rechts = Vector3.Cross(oben, vor);
             float tempo = sprinten.IsPressed() ? sprintTempo : laufTempo;

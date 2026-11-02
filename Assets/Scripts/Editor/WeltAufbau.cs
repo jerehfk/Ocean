@@ -2,6 +2,11 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
+using Unity.Netcode;
+using Unity.Netcode.Components;
+using Unity.Netcode.Transports.UTP;
+using UnityEngine.UIElements;
 
 namespace Ocean.EditorWerkzeuge
 {
@@ -21,7 +26,7 @@ namespace Ocean.EditorWerkzeuge
             WeltDaten daten = DatenLadenOderAnlegen();
 
             // Alte Welt, alten Spieler und die Standardkamera der Vorlage entfernen
-            foreach (string name in new[] { "Welt", "Spieler", "Main Camera" })
+            foreach (string name in new[] { "Welt", "Spieler", "Main Camera", "Startpunkte", "Menuekamera", "Netzwerk", "Oberflaeche" })
             {
                 var alt = GameObject.Find(name);
                 if (alt != null) Object.DestroyImmediate(alt);
@@ -80,7 +85,7 @@ namespace Ocean.EditorWerkzeuge
             wasser.AddComponent<Wasser>().Radius = daten.wasserRadius;
 
             PalmenAnlegen(daten, welt.transform);
-            SpielerAnlegen(daten);
+            NetzwerkAnlegen(daten, SpielerVorlageErstellen());
             OptikAufbau.Anwenden(welt.transform);
 
             EditorSceneManager.MarkSceneDirty(welt.scene);
@@ -132,13 +137,17 @@ namespace Ocean.EditorWerkzeuge
             }
         }
 
-        static void SpielerAnlegen(WeltDaten daten)
-        {
-            var spieler = new GameObject("Spieler");
-            // Start am Strand, kurz vor dem Steg
-            spieler.transform.position = KugelGenerator.PunktAufInsel(daten, Mathf.Max(0f, daten.inselRadius * daten.Form(0f) - 10f), 1.2f);
-            spieler.transform.rotation = Quaternion.FromToRotation(Vector3.up, spieler.transform.position.normalized);
+        const string SpielerVorlagePfad = "Assets/Vorlagen/Spieler.prefab";
 
+        /// <summary>
+        /// Baut die Spielfigur als Vorlage (Prefab). Im Netzwerkspiel erzeugt Netcode daraus für jeden
+        /// Spieler eine eigene Figur. Aufbau: Spieler (Physik, Netz) → Blick (links/rechts) → Kamera (hoch/runter).
+        /// </summary>
+        static GameObject SpielerVorlageErstellen()
+        {
+            if (!AssetDatabase.IsValidFolder("Assets/Vorlagen")) AssetDatabase.CreateFolder("Assets", "Vorlagen");
+
+            var spieler = new GameObject("Spieler");
             var kapsel = spieler.AddComponent<CapsuleCollider>();
             kapsel.height = 1.8f;
             kapsel.radius = 0.35f;
@@ -154,13 +163,142 @@ namespace Ocean.EditorWerkzeuge
             var kamera = kameraObjekt.AddComponent<Camera>();
             kamera.nearClipPlane = 0.05f;
             kamera.farClipPlane = 3000f;
-            kameraObjekt.AddComponent<AudioListener>();
+            NachbearbeitungAn(kameraObjekt);
+            var hoerer = kameraObjekt.AddComponent<AudioListener>();
+            var unterwasser = kameraObjekt.AddComponent<UnterwasserEffekt>();
+            unterwasser.enabled = false;
 
-            kameraObjekt.AddComponent<UnterwasserEffekt>();
+            // Platzhalter-Astronaut: weißer Körper, Helm dreht mit dem Blick, Visier dunkel,
+            // Gürtel und Helmring in der Spielerfarbe
+            var weiss = MaterialHolen("Anzug", new Color(0.93f, 0.93f, 0.95f), false);
+            var visierMat = MaterialHolen("Visier", new Color(0.05f, 0.06f, 0.08f), false);
+            visierMat.SetFloat("_Smoothness", 0.95f);
+            var akzentMat = MaterialHolen("Akzent", Color.white, false);
 
+            var rumpf = Teil(PrimitiveType.Capsule, "Rumpf", spieler.transform, new Vector3(0f, -0.15f, 0f), new Vector3(0.7f, 0.6f, 0.6f), weiss);
+            var guertel = Teil(PrimitiveType.Cylinder, "Guertel", spieler.transform, new Vector3(0f, -0.35f, 0f), new Vector3(0.74f, 0.05f, 0.64f), akzentMat);
+            var helm = Teil(PrimitiveType.Sphere, "Helm", blick, new Vector3(0f, 0.65f, 0f), Vector3.one * 0.62f, weiss);
+            var visier = Teil(PrimitiveType.Sphere, "Visier", blick, new Vector3(0f, 0.66f, 0.17f), new Vector3(0.48f, 0.36f, 0.32f), visierMat);
+            var helmring = Teil(PrimitiveType.Cylinder, "Helmring", blick, new Vector3(0f, 0.36f, 0f), new Vector3(0.5f, 0.03f, 0.5f), akzentMat);
+
+            // Steuerung ist in der Vorlage aus – SpielerNetz schaltet sie nur für die eigene Figur ein
             var steuerung = spieler.AddComponent<SpielerSteuerung>();
             steuerung.blick = blick;
             steuerung.kamera = kameraObjekt.transform;
+            steuerung.enabled = false;
+            kamera.enabled = false;
+            hoerer.enabled = false;
+
+            // Netzwerk: Figur ist ein Netzwerk-Objekt; Position und Blickrichtung bestimmt der Besitzer
+            spieler.AddComponent<NetworkObject>();
+            var netzTransform = spieler.AddComponent<BesitzerNetzwerkTransform>();
+            netzTransform.SyncScaleX = netzTransform.SyncScaleY = netzTransform.SyncScaleZ = false;
+            spieler.AddComponent<NetworkRigidbody>();
+            var blickTransform = blick.gameObject.AddComponent<BesitzerNetzwerkTransform>();
+            blickTransform.InLocalSpace = true;
+            blickTransform.SyncPositionX = blickTransform.SyncPositionY = blickTransform.SyncPositionZ = false;
+            blickTransform.SyncScaleX = blickTransform.SyncScaleY = blickTransform.SyncScaleZ = false;
+
+            var netz = spieler.AddComponent<SpielerNetz>();
+            netz.steuerung = steuerung;
+            netz.kamera = kamera;
+            netz.hoerer = hoerer;
+            netz.unterwasser = unterwasser;
+            netz.koerper = new Renderer[] { rumpf, guertel, helm, visier, helmring };
+            netz.akzentTeile = new Renderer[] { guertel, helmring };
+
+            var vorlage = PrefabUtility.SaveAsPrefabAsset(spieler, SpielerVorlagePfad);
+            Object.DestroyImmediate(spieler);
+            return vorlage;
+        }
+
+        static void NachbearbeitungAn(GameObject kamera)
+        {
+            var daten = kamera.GetComponent<UniversalAdditionalCameraData>();
+            if (daten == null) daten = kamera.AddComponent<UniversalAdditionalCameraData>();
+            daten.renderPostProcessing = true;
+        }
+
+        static Renderer Teil(PrimitiveType form, string name, Transform eltern, Vector3 position, Vector3 groesse, Material material)
+        {
+            var teil = GameObject.CreatePrimitive(form);
+            teil.name = name;
+            Object.DestroyImmediate(teil.GetComponent<Collider>()); // Kollision macht nur die Kapsel
+            teil.transform.SetParent(eltern, false);
+            teil.transform.localPosition = position;
+            teil.transform.localScale = groesse;
+            var renderer = teil.GetComponent<MeshRenderer>();
+            renderer.sharedMaterial = material;
+            return renderer;
+        }
+
+        /// <summary>Startplätze, Menükamera und Netzwerk-Objekt (NetworkManager + Menü) in die Szene.</summary>
+        static void NetzwerkAnlegen(WeltDaten daten, GameObject spielerVorlage)
+        {
+            // Startplätze nebeneinander am Strand, mit Blick zum Steg (+X)
+            var start = new GameObject("Startpunkte").AddComponent<Startpunkte>();
+            float abstandZurMitte = Mathf.Max(0f, daten.inselRadius * daten.Form(0f) - 10f);
+            var punkte = new Transform[6];
+            for (int i = 0; i < punkte.Length; i++)
+            {
+                float seitlich = (i - (punkte.Length - 1) * 0.5f) * 1.6f;
+                Vector3 position = KugelGenerator.PunktAufBoden(daten, abstandZurMitte, seitlich, 1.2f, out Vector3 oben);
+                Vector3 vor = Vector3.ProjectOnPlane(Vector3.right, oben).normalized;
+                var punkt = new GameObject($"Start {i + 1}").transform;
+                punkt.SetParent(start.transform, false);
+                punkt.SetPositionAndRotation(position, Quaternion.LookRotation(vor, oben));
+                punkte[i] = punkt;
+            }
+            start.punkte = punkte;
+
+            // Menükamera: schräg über dem Wasser mit Blick auf die Insel
+            var menueKamera = new GameObject("Menuekamera").AddComponent<Camera>();
+            KugelGenerator.PunktAufBoden(daten, -35f, -25f, 0f, out Vector3 kameraOben);
+            Vector3 kameraPos = kameraOben * (daten.wasserRadius + 9f); // 9 m über dem Wasser
+            menueKamera.transform.position = kameraPos;
+            menueKamera.transform.rotation = Quaternion.LookRotation(Vector3.up * (daten.wasserRadius + 2f) - kameraPos, kameraOben);
+            menueKamera.farClipPlane = 3000f;
+            NachbearbeitungAn(menueKamera.gameObject);
+            menueKamera.gameObject.AddComponent<AudioListener>();
+
+            // Netzwerk
+            var netzObjekt = new GameObject("Netzwerk");
+            var netz = netzObjekt.AddComponent<NetworkManager>();
+            var transport = netzObjekt.AddComponent<UnityTransport>();
+            if (netz.NetworkConfig == null) netz.NetworkConfig = new NetworkConfig();
+            netz.NetworkConfig.NetworkTransport = transport;
+            netz.NetworkConfig.PlayerPrefab = spielerVorlage;
+            netz.NetworkConfig.ConnectionApproval = true;
+            var menue = netzObjekt.AddComponent<Netzwerkmenue>();
+            menue.spielerVorlage = spielerVorlage;
+            menue.menueKamera = menueKamera;
+            menue.startpunkte = start;
+
+            // Oberfläche (UI Toolkit): Aufbau in Assets/UI/Menue.uxml, Gestaltung in Menue.uss
+            var oberflaeche = new GameObject("Oberflaeche").AddComponent<UIDocument>();
+            oberflaeche.panelSettings = PanelEinstellungenHolen();
+            oberflaeche.visualTreeAsset = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>("Assets/UI/Menue.uxml");
+            if (oberflaeche.visualTreeAsset == null) Debug.LogWarning("Ocean: Assets/UI/Menue.uxml nicht gefunden.");
+            menue.oberflaeche = oberflaeche;
+        }
+
+        static PanelSettings PanelEinstellungenHolen()
+        {
+            const string pfad = "Assets/UI/MenuePanel.asset";
+            var panel = AssetDatabase.LoadAssetAtPath<PanelSettings>(pfad);
+            if (panel == null)
+            {
+                panel = ScriptableObject.CreateInstance<PanelSettings>();
+                AssetDatabase.CreateAsset(panel, pfad);
+            }
+            panel.themeStyleSheet = AssetDatabase.LoadAssetAtPath<ThemeStyleSheet>("Assets/UI/OceanTheme.tss");
+            // Größe passt sich dem Bildschirm an, gestaltet ist alles für 1920 × 1080
+            panel.scaleMode = PanelScaleMode.ScaleWithScreenSize;
+            panel.referenceResolution = new Vector2Int(1920, 1080);
+            panel.screenMatchMode = PanelScreenMatchMode.MatchWidthOrHeight;
+            panel.match = 0.5f;
+            EditorUtility.SetDirty(panel);
+            return panel;
         }
 
         static WeltDaten DatenLadenOderAnlegen()
@@ -209,8 +347,8 @@ namespace Ocean.EditorWerkzeuge
                 mat.SetFloat("_Blend", 0f);     // Alpha
                 mat.SetFloat("_Cull", 0f);      // beide Seiten zeichnen (auch von unter Wasser sichtbar)
                 mat.SetFloat("_ZWrite", 0f);
-                mat.SetFloat("_SrcBlend", (float)BlendMode.SrcAlpha);
-                mat.SetFloat("_DstBlend", (float)BlendMode.OneMinusSrcAlpha);
+                mat.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                mat.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
                 mat.SetFloat("_Smoothness", 0.95f); // glänzend: Sonnenglitzer
                 mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
                 mat.SetOverrideTag("RenderType", "Transparent");
