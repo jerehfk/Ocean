@@ -18,7 +18,7 @@ namespace Ocean
         static readonly CultureInfo Deutsch = CultureInfo.GetCultureInfo("de-DE");
 
         VisualElement anzeige, eimerFuellung, rampeInfo;
-        Label geld, hinweis, eimerText, tankText, raketeText;
+        Label geld, hinweis, eimerText, tankText, raketeText, behaelterName;
 
         void Start()
         {
@@ -31,6 +31,7 @@ namespace Ocean
             eimerText = wurzel.Q<Label>("eimerText");
             tankText = wurzel.Q<Label>("tankText");
             raketeText = wurzel.Q<Label>("raketeText");
+            behaelterName = wurzel.Q<Label>("behaelterName");
         }
 
         void Update()
@@ -43,10 +44,11 @@ namespace Ocean
 
             var stand = Spielstand.Instanz;
             geld.text = stand != null ? stand.kasse.Value.ToString("N0", Deutsch) : "0";
-            hinweis.text = spieler.Hinweis;
+            hinweis.text = Bauen.Aktiv ? Bauen.Lokal.Hinweis : spieler.Hinweis;
 
             eimerFuellung.style.width = Length.Percent(Mathf.Clamp01(spieler.Fuellstand) * 100f);
-            eimerText.text = $"{spieler.eimerLiter.Value:0} / {spieler.werte.eimerLiter:0} l";
+            eimerText.text = $"{spieler.eimerLiter.Value:0} / {spieler.Kapazitaet:0} l";
+            behaelterName.text = spieler.BehaelterName;
 
             var rampe = Startrampe.Instanz;
             bool nah = rampe != null && Vector3.Distance(spieler.transform.position, rampe.transform.position) < rampenNaehe;
@@ -55,7 +57,7 @@ namespace Ocean
             {
                 tankText.text = $"Tank: {rampe.tankLiter.Value.ToString("N0", Deutsch)} l";
                 raketeText.text = rampe.RaketeBereit
-                    ? $"Rakete startbereit · nimmt bis {rampe.werte.raketeLadung:0} l"
+                    ? $"Rakete startbereit · nimmt bis {(stand != null ? stand.RaketenLadung : rampe.werte.raketeLadung):0} l"
                     : $"Rakete zurück in {Mathf.CeilToInt(rampe.restFlugzeit.Value)} s";
             }
         }

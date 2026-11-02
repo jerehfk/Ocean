@@ -245,3 +245,80 @@
     margin-left: 14px;
     min-width: 80px;
 }
+
+/* ---------- Shop ---------- */
+
+.shop-karte {
+    width: 820px;
+    max-height: 86%;
+}
+
+.shop-kopf {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.shop-ueberschrift {
+    margin-bottom: 0;
+}
+
+.shop-geld {
+    font-size: 26px;
+    -unity-font-style: bold;
+    color: rgb(16, 168, 184);
+}
+
+.shop-liste {
+    flex-shrink: 1;
+}
+
+.shop-bereich {
+    font-size: 20px;
+    -unity-font-style: bold;
+    color: rgb(88, 118, 128);
+    margin-top: 14px;
+    margin-bottom: 4px;
+    letter-spacing: 2px;
+}
+
+.shop-zeile {
+    flex-direction: row;
+    align-items: center;
+    padding: 10px 14px;
+    margin-bottom: 6px;
+    border-radius: 14px;
+    background-color: rgb(239, 246, 247);
+}
+
+.shop-texte {
+    flex-grow: 1;
+    flex-shrink: 1;
+    margin-right: 14px;
+}
+
+.shop-titel {
+    font-size: 22px;
+    -unity-font-style: bold;
+    color: rgb(18, 58, 72);
+}
+
+.shop-text {
+    font-size: 17px;
+    color: rgb(88, 118, 128);
+    white-space: normal;
+}
+
+.shop-knopf {
+    width: 150px;
+    height: 52px;
+    margin: 0;
+    font-size: 22px;
+}
+
+.shop-knopf:disabled {
+    background-color: rgb(200, 214, 218);
+    color: rgb(240, 245, 246);
+    scale: 1 1;
+}

@@ -69,9 +69,15 @@ namespace Ocean
 
         void Update()
         {
-            // Esc öffnet/schließt das Pausemenü (Maus frei = Pause)
-            if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
-                Cursor.lockState = Cursor.lockState == CursorLockMode.Locked ? CursorLockMode.None : CursorLockMode.Locked;
+            // Tab: Shop auf/zu. Esc: Shop zu – sonst Pausemenü auf/zu (Maus frei = Pause)
+            var tastatur = Keyboard.current;
+            if (tastatur != null && tastatur.tabKey.wasPressedThisFrame)
+                ShopFenster.Umschalten();
+            else if (tastatur != null && tastatur.escapeKey.wasPressedThisFrame)
+            {
+                if (ShopFenster.Offen) ShopFenster.Schliessen();
+                else Cursor.lockState = Cursor.lockState == CursorLockMode.Locked ? CursorLockMode.None : CursorLockMode.Locked;
+            }
 
             if (Cursor.lockState == CursorLockMode.Locked)
             {

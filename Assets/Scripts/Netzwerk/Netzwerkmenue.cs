@@ -21,6 +21,8 @@ namespace Ocean
 
         [Tooltip("Spielfigur, die für jeden Spieler erzeugt wird.")]
         public GameObject spielerVorlage;
+        [Tooltip("Weitere Netzwerk-Objekte, die während des Spiels entstehen (z. B. Pumpen).")]
+        public GameObject[] weitereVorlagen;
         [Tooltip("Kamera für das Menü, solange man noch keine Spielfigur hat.")]
         public Camera menueKamera;
         public Startpunkte startpunkte;
@@ -84,7 +86,7 @@ namespace Ocean
         {
             if (hauptmenue == null) return;
             bool verbindet = netz.IsClient && !netz.IsConnectedClient;
-            bool pausiert = imSpiel && UnityEngine.Cursor.lockState != CursorLockMode.Locked;
+            bool pausiert = imSpiel && UnityEngine.Cursor.lockState != CursorLockMode.Locked && !ShopFenster.Offen;
 
             Zeigen(hauptmenue, !imSpiel && !verbindet && seite == "hauptmenue");
             Zeigen(freunde, !imSpiel && !verbindet && seite == "freunde");
@@ -116,6 +118,9 @@ namespace Ocean
         {
             if (spielerVorlage == null) { Meldung = "Keine Spielfigur hinterlegt."; return false; }
             if (!netz.NetworkConfig.Prefabs.Contains(spielerVorlage)) netz.AddNetworkPrefab(spielerVorlage);
+            if (weitereVorlagen != null)
+                foreach (var vorlage in weitereVorlagen)
+                    if (vorlage != null && !netz.NetworkConfig.Prefabs.Contains(vorlage)) netz.AddNetworkPrefab(vorlage);
             naechsterStartplatz = 0;
             verlaesstSelbst = false;
             return true;

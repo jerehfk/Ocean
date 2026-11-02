@@ -51,11 +51,13 @@ namespace Ocean.EditorWerkzeuge
             var boden = ObjektMitMesh("Meeresboden", welt.transform, bodenMesh, sand);
             boden.transform.localScale = Vector3.one * daten.BodenRadius;
             boden.AddComponent<MeshCollider>().sharedMesh = bodenMesh;
+            boden.AddComponent<Baugrund>();
 
             // Insel: fein aufgelöstes Bodenstück am Nordpol
             Mesh inselMesh = MeshSpeichern(KugelGenerator.Inselstueck(daten));
             var insel = ObjektMitMesh("Insel", welt.transform, inselMesh, sand);
             insel.AddComponent<MeshCollider>().sharedMesh = inselMesh;
+            insel.AddComponent<Baugrund>();
 
             // Steg: vom Strand ins Wasser, entlang +X. Der Steg ist gerade, der Planet gekrümmt:
             // die Enden liegen um „Durchhang“ höher über der Oberfläche als die Mitte.
@@ -76,6 +78,7 @@ namespace Ocean.EditorWerkzeuge
             steg.transform.SetPositionAndRotation(stegOben * (daten.wasserRadius + stegHoehe), Quaternion.LookRotation(stegVor, stegOben));
             steg.transform.localScale = new Vector3(3f, 0.3f, stegEnde - stegAnfang);
             steg.GetComponent<MeshRenderer>().sharedMaterial = MaterialHolen("Holz", new Color(0.36f, 0.24f, 0.14f), false);
+            steg.AddComponent<Baugrund>();
 
             // Wasser: feine Kugel mit Radius 1, Pegel über die Skalierung
             Mesh wasserMesh = MeshSpeichern(KugelGenerator.Wuerfelkugel(daten.wasserAufloesung, "Wasser"));
@@ -87,8 +90,17 @@ namespace Ocean.EditorWerkzeuge
             SpielWerte werte = WerteLadenOderAnlegen();
             PalmenAnlegen(daten, welt.transform);
             StartrampeAnlegen(daten, werte);
-            new GameObject("Spielstand").AddComponent<NetworkObject>().gameObject.AddComponent<Spielstand>();
-            NetzwerkAnlegen(daten, SpielerVorlageErstellen(werte));
+            var handpumpe = PumpenVorlageErstellen(Pumpe.Art.Hand, werte);
+            var motorpumpe = PumpenVorlageErstellen(Pumpe.Art.Motor, werte);
+            var spielstandObjekt = new GameObject("Spielstand");
+            spielstandObjekt.AddComponent<NetworkObject>();
+            var spielstand = spielstandObjekt.AddComponent<Spielstand>();
+            spielstand.werte = werte;
+            spielstand.handpumpeVorlage = handpumpe;
+            spielstand.motorpumpeVorlage = motorpumpe;
+            var rohr = RohrVorlageErstellen();
+            spielstand.rohrVorlage = rohr;
+            NetzwerkAnlegen(daten, SpielerVorlageErstellen(werte), new[] { handpumpe, motorpumpe, rohr });
             OptikAufbau.Anwenden(welt.transform);
 
             EditorSceneManager.MarkSceneDirty(welt.scene);
@@ -203,19 +215,35 @@ namespace Ocean.EditorWerkzeuge
             blickTransform.SyncPositionX = blickTransform.SyncPositionY = blickTransform.SyncPositionZ = false;
             blickTransform.SyncScaleX = blickTransform.SyncScaleY = blickTransform.SyncScaleZ = false;
 
-            // Eimer in der Hand: Kind der Kamera, unten rechts im Bild
+            // Behälter in der Hand: Kinder der Kamera, unten rechts im Bild (je nach Upgrade einer sichtbar)
+            var wasserMat = MaterialHolen("Eimerwasser", new Color(0.15f, 0.62f, 0.75f), false);
             var eimer = Teil(PrimitiveType.Cylinder, "Eimer", kameraObjekt.transform, new Vector3(0.32f, -0.32f, 0.62f), new Vector3(0.26f, 0.14f, 0.26f),
                 MaterialHolen("Eimer", new Color(0.98f, 0.78f, 0.18f), false));
-            var eimerWasser = Teil(PrimitiveType.Cylinder, "Wasser im Eimer", eimer.transform, new Vector3(0f, 0.85f, 0f), new Vector3(0.88f, 0.03f, 0.88f),
-                MaterialHolen("Eimerwasser", new Color(0.15f, 0.62f, 0.75f), false));
-            eimerWasser.gameObject.SetActive(false);
+            var eimerWasser = Teil(PrimitiveType.Cylinder, "Wasser", eimer.transform, new Vector3(0f, 0.85f, 0f), new Vector3(0.88f, 0.03f, 0.88f), wasserMat);
+            var fass = Teil(PrimitiveType.Cylinder, "Fass", kameraObjekt.transform, new Vector3(0.38f, -0.42f, 0.75f), new Vector3(0.42f, 0.28f, 0.42f),
+                MaterialHolen("Fass", new Color(0.20f, 0.42f, 0.78f), false));
+            Teil(PrimitiveType.Cylinder, "Reifen", fass.transform, new Vector3(0f, 0.5f, 0f), new Vector3(1.04f, 0.06f, 1.04f), MaterialHolen("Metall", new Color(0.55f, 0.58f, 0.62f), false));
+            var fassWasser = Teil(PrimitiveType.Cylinder, "Wasser", fass.transform, new Vector3(0f, 0.9f, 0f), new Vector3(0.9f, 0.03f, 0.9f), wasserMat);
+            var karre = Teil(PrimitiveType.Cube, "Fass-Karre", kameraObjekt.transform, new Vector3(0f, -0.75f, 1.25f), new Vector3(0.9f, 0.45f, 0.75f),
+                MaterialHolen("Karre", new Color(0.30f, 0.62f, 0.32f), false));
+            var karreWasser = Teil(PrimitiveType.Cube, "Wasser", karre.transform, new Vector3(0f, 0.45f, 0f), new Vector3(0.9f, 0.05f, 0.9f), wasserMat);
+            Teil(PrimitiveType.Cylinder, "Rad", karre.transform, new Vector3(0f, -0.5f, 0.45f), new Vector3(0.35f, 0.08f, 0.5f), MaterialHolen("Visier", new Color(0.05f, 0.06f, 0.08f), false))
+                .transform.localRotation = Quaternion.Euler(0f, 0f, 90f);
+            foreach (var w in new[] { eimerWasser, fassWasser, karreWasser }) w.gameObject.SetActive(false);
+            fass.gameObject.SetActive(false);
+            karre.gameObject.SetActive(false);
 
             var aktionen = spieler.AddComponent<SpielerAktionen>();
             aktionen.werte = werte;
             aktionen.kamera = kamera;
             aktionen.steuerung = steuerung;
-            aktionen.eimer = eimer.transform;
-            aktionen.eimerWasser = eimerWasser.gameObject;
+            aktionen.behaelterModelle = new[] { eimer.transform, fass.transform, karre.transform };
+            aktionen.behaelterWasser = new[] { eimerWasser.gameObject, fassWasser.gameObject, karreWasser.gameObject };
+
+            var bauen = spieler.AddComponent<Bauen>();
+            bauen.kamera = kamera;
+            bauen.vorschauErlaubt = DurchsichtigUnbeleuchtet("VorschauErlaubt", new Color(0.25f, 0.95f, 0.45f, 0.45f));
+            bauen.vorschauVerboten = DurchsichtigUnbeleuchtet("VorschauVerboten", new Color(0.95f, 0.25f, 0.20f, 0.45f));
 
             var netz = spieler.AddComponent<SpielerNetz>();
             netz.steuerung = steuerung;
@@ -251,7 +279,7 @@ namespace Ocean.EditorWerkzeuge
         }
 
         /// <summary>Startplätze, Menükamera und Netzwerk-Objekt (NetworkManager + Menü) in die Szene.</summary>
-        static void NetzwerkAnlegen(WeltDaten daten, GameObject spielerVorlage)
+        static void NetzwerkAnlegen(WeltDaten daten, GameObject spielerVorlage, GameObject[] weitereVorlagen)
         {
             // Startplätze nebeneinander am Strand, mit Blick zum Steg (+X)
             var start = new GameObject("Startpunkte").AddComponent<Startpunkte>();
@@ -289,6 +317,7 @@ namespace Ocean.EditorWerkzeuge
             netz.NetworkConfig.ConnectionApproval = true;
             var menue = netzObjekt.AddComponent<Netzwerkmenue>();
             menue.spielerVorlage = spielerVorlage;
+            menue.weitereVorlagen = weitereVorlagen;
             menue.menueKamera = menueKamera;
             menue.startpunkte = start;
 
@@ -299,6 +328,7 @@ namespace Ocean.EditorWerkzeuge
             if (oberflaeche.visualTreeAsset == null) Debug.LogWarning("Ocean: Assets/UI/Menue.uxml nicht gefunden.");
             menue.oberflaeche = oberflaeche;
             oberflaeche.gameObject.AddComponent<Anzeige>().oberflaeche = oberflaeche;
+            oberflaeche.gameObject.AddComponent<ShopFenster>().oberflaeche = oberflaeche;
         }
 
         static PanelSettings PanelEinstellungenHolen()
@@ -339,7 +369,9 @@ namespace Ocean.EditorWerkzeuge
             var rot = MaterialHolen("Knopf", new Color(0.90f, 0.20f, 0.18f), false);
 
             // Plattform (begehbar)
-            var plattform = Teil(PrimitiveType.Cylinder, "Plattform", t, new Vector3(0f, 0.2f, 0f), new Vector3(6f, 0.25f, 6f), grau);
+            // Die Insel ist leicht gewölbt: Plattform, Tank und Säule reichen deshalb ein Stück in den Boden,
+            // damit auf der abfallenden Seite keine Lücke entsteht. Oberkanten bleiben gleich.
+            var plattform = Teil(PrimitiveType.Cylinder, "Plattform", t, new Vector3(0f, -0.3f, 0f), new Vector3(6f, 0.7f, 6f), grau);
             plattform.gameObject.AddComponent<MeshCollider>().sharedMesh = plattform.GetComponent<MeshFilter>().sharedMesh;
 
             // Rakete (ohne Kollision; fliegt beim Start nach oben)
@@ -357,14 +389,23 @@ namespace Ocean.EditorWerkzeuge
             }
 
             // Tank neben der Plattform (Ziel zum Eimer-Leeren)
-            var tank = Teil(PrimitiveType.Cylinder, "Tank", t, new Vector3(-4.2f, 1.1f, 0f), new Vector3(1.8f, 1.1f, 1.8f), weiss);
+            var tank = Teil(PrimitiveType.Cylinder, "Tank", t, new Vector3(-4.2f, 0.85f, 0f), new Vector3(1.8f, 1.35f, 1.8f), weiss);
             tank.gameObject.AddComponent<CapsuleCollider>();
             Teil(PrimitiveType.Cylinder, "Tankring", t, new Vector3(-4.2f, 1.6f, 0f), new Vector3(1.86f, 0.06f, 1.86f), tuerkis);
+            // Vier Rohr-Anschlüsse rund um den Tankfuß
+            for (int i = 0; i < 4; i++)
+            {
+                float w = i * Mathf.PI * 0.5f;
+                var stutzen = Teil(PrimitiveType.Sphere, $"Tankanschluss {i + 1}", t,
+                    new Vector3(-4.2f + Mathf.Cos(w) * 1.0f, 0.25f, Mathf.Sin(w) * 1.0f), Vector3.one * 0.3f, tuerkis);
+                stutzen.gameObject.AddComponent<SphereCollider>();
+                stutzen.gameObject.AddComponent<Anschluss>().typ = Anschluss.Typ.Tank;
+            }
 
             // Startknopf auf einer Säule
-            var saeule = Teil(PrimitiveType.Cube, "Startknopf", t, new Vector3(-2.6f, 0.55f, 2.6f), new Vector3(0.45f, 1.1f, 0.45f), grau);
+            var saeule = Teil(PrimitiveType.Cube, "Startknopf", t, new Vector3(-2.6f, 0.3f, 2.6f), new Vector3(0.45f, 1.6f, 0.45f), grau);
             var knopfKollision = saeule.gameObject.AddComponent<BoxCollider>();
-            Teil(PrimitiveType.Cylinder, "Knopf", saeule.transform, new Vector3(0f, 0.55f, 0f), new Vector3(0.6f, 0.08f, 0.6f), rot);
+            Teil(PrimitiveType.Cylinder, "Knopf", saeule.transform, new Vector3(0f, 0.52f, 0f), new Vector3(0.6f, 0.05f, 0.6f), rot);
 
             rampe.AddComponent<NetworkObject>();
             var logik = rampe.AddComponent<Startrampe>();
@@ -372,6 +413,129 @@ namespace Ocean.EditorWerkzeuge
             logik.rakete = rakete;
             logik.tankZiel = tank.GetComponent<Collider>();
             logik.startknopf = knopfKollision;
+        }
+
+        /// <summary>
+        /// Pumpen-Vorlage (Prefab). Handpumpe: Sockel, Säule, Hebel. Motorpumpe: Gehäuse mit Schwungrad.
+        /// Beide mit Saugschlauch (legt der Spieler), Rohr-Anschluss am Auslass, Netzwerk-Objekt und Kollision.
+        /// </summary>
+        static GameObject PumpenVorlageErstellen(Pumpe.Art art, SpielWerte werte)
+        {
+            if (!AssetDatabase.IsValidFolder("Assets/Vorlagen")) AssetDatabase.CreateFolder("Assets", "Vorlagen");
+            var weiss = MaterialHolen("Anzug", new Color(0.93f, 0.93f, 0.95f), false);
+            var grau = MaterialHolen("Metall", new Color(0.55f, 0.58f, 0.62f), false);
+            var tuerkis = MaterialHolen("Tuerkis", new Color(0.06f, 0.66f, 0.72f), false);
+            var dunkel = MaterialHolen("Visier", new Color(0.05f, 0.06f, 0.08f), false);
+
+            var pumpe = new GameObject(art == Pumpe.Art.Hand ? "Handpumpe" : "Motorpumpe");
+            var t = pumpe.transform;
+            Transform beweglich, auslass, einlass;
+            var kollision = pumpe.AddComponent<BoxCollider>();
+
+            if (art == Pumpe.Art.Hand)
+            {
+                Teil(PrimitiveType.Cube, "Sockel", t, new Vector3(0f, 0.1f, 0f), new Vector3(0.6f, 0.2f, 0.6f), grau);
+                Teil(PrimitiveType.Cylinder, "Saeule", t, new Vector3(0f, 0.65f, 0f), new Vector3(0.22f, 0.45f, 0.22f), weiss);
+                Teil(PrimitiveType.Cylinder, "Ring", t, new Vector3(0f, 0.95f, 0f), new Vector3(0.26f, 0.04f, 0.26f), tuerkis);
+                Teil(PrimitiveType.Cylinder, "Ausguss", t, new Vector3(0f, 0.85f, 0.2f), new Vector3(0.08f, 0.12f, 0.08f), grau)
+                    .transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+                beweglich = new GameObject("Hebel").transform;
+                beweglich.SetParent(t, false);
+                beweglich.localPosition = new Vector3(0f, 1.15f, 0f);
+                Teil(PrimitiveType.Cube, "Griff", beweglich, new Vector3(0f, 0f, -0.35f), new Vector3(0.07f, 0.07f, 0.75f), dunkel);
+                auslass = Teil(PrimitiveType.Sphere, "Auslass", t, new Vector3(0f, 0.15f, -0.38f), Vector3.one * 0.22f, tuerkis).transform;
+                einlass = Teil(PrimitiveType.Sphere, "Einlass", t, new Vector3(0f, 0.15f, 0.3f), Vector3.one * 0.12f, grau).transform;
+                kollision.center = new Vector3(0f, 0.65f, 0f);
+                kollision.size = new Vector3(0.7f, 1.3f, 0.9f);
+            }
+            else
+            {
+                Teil(PrimitiveType.Cube, "Gehaeuse", t, new Vector3(0f, 0.45f, 0f), new Vector3(1.1f, 0.8f, 0.8f), weiss);
+                Teil(PrimitiveType.Cube, "Streifen", t, new Vector3(0f, 0.55f, 0f), new Vector3(1.12f, 0.1f, 0.82f), tuerkis);
+                Teil(PrimitiveType.Cylinder, "Auspuff", t, new Vector3(0.35f, 1.0f, -0.2f), new Vector3(0.12f, 0.2f, 0.12f), grau);
+                beweglich = new GameObject("Schwungrad").transform;
+                beweglich.SetParent(t, false);
+                beweglich.localPosition = new Vector3(-0.6f, 0.5f, 0f);
+                beweglich.localRotation = Quaternion.Euler(0f, 0f, 90f);
+                Teil(PrimitiveType.Cylinder, "Rad", beweglich, Vector3.zero, new Vector3(0.6f, 0.05f, 0.6f), dunkel);
+                Teil(PrimitiveType.Cube, "Speiche", beweglich, new Vector3(0f, 0.06f, 0f), new Vector3(0.55f, 0.02f, 0.08f), tuerkis);
+                Teil(PrimitiveType.Cylinder, "Saugrohr", t, new Vector3(0f, 0.2f, 0.5f), new Vector3(0.12f, 0.25f, 0.12f), grau)
+                    .transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+                auslass = Teil(PrimitiveType.Sphere, "Auslass", t, new Vector3(0f, 0.15f, -0.52f), Vector3.one * 0.24f, tuerkis).transform;
+                einlass = Teil(PrimitiveType.Sphere, "Einlass", t, new Vector3(0f, 0.2f, 0.75f), Vector3.one * 0.14f, grau).transform;
+                kollision.center = new Vector3(0f, 0.5f, 0f);
+                kollision.size = new Vector3(1.4f, 1.1f, 1.0f);
+            }
+
+            // Schläuche als 3D-Röhren; ihre Form wird im Spiel beim Aufstellen erzeugt
+            var saugschlauch = SchlauchObjekt("Saugschlauch", t, MaterialHolen("Saugschlauch", new Color(0.12f, 0.14f, 0.16f), false));
+
+            pumpe.AddComponent<NetworkObject>();
+            var logik = pumpe.AddComponent<Pumpe>();
+            logik.saugschlauch = saugschlauch;
+            logik.einlass = einlass;
+            logik.art = art;
+            logik.werte = werte;
+            logik.beweglich = beweglich;
+            // Auslass = Anschluss für Rohre (mit Kollision, damit man ihn beim Rohrbau anpeilen kann)
+            auslass.gameObject.AddComponent<SphereCollider>();
+            var auslassAnschluss = auslass.gameObject.AddComponent<Anschluss>();
+            auslassAnschluss.typ = Anschluss.Typ.Pumpe;
+            auslassAnschluss.pumpe = logik;
+            logik.auslass = auslassAnschluss;
+
+            var vorlage = PrefabUtility.SaveAsPrefabAsset(pumpe, $"Assets/Vorlagen/{pumpe.name}.prefab");
+            Object.DestroyImmediate(pumpe);
+            return vorlage;
+        }
+
+        /// <summary>Rohr-Vorlage: nur Form und Netzwerk; Verlauf und Anschlüsse entstehen beim Legen.</summary>
+        static GameObject RohrVorlageErstellen()
+        {
+            if (!AssetDatabase.IsValidFolder("Assets/Vorlagen")) AssetDatabase.CreateFolder("Assets", "Vorlagen");
+            var rohr = new GameObject("Rohr");
+            var form = rohr.AddComponent<MeshFilter>();
+            rohr.AddComponent<MeshRenderer>().sharedMaterial = MaterialHolen("Rohr", new Color(0.82f, 0.84f, 0.86f), false);
+            rohr.AddComponent<NetworkObject>();
+            var logik = rohr.AddComponent<Rohr>();
+            logik.form = form;
+            logik.anschlussMaterial = MaterialHolen("Tuerkis", new Color(0.06f, 0.66f, 0.72f), false);
+            var vorlage = PrefabUtility.SaveAsPrefabAsset(rohr, "Assets/Vorlagen/Rohr.prefab");
+            Object.DestroyImmediate(rohr);
+            return vorlage;
+        }
+
+        static MeshFilter SchlauchObjekt(string name, Transform eltern, Material material)
+        {
+            var objekt = new GameObject(name);
+            objekt.transform.SetParent(eltern, false);
+            var filter = objekt.AddComponent<MeshFilter>();
+            objekt.AddComponent<MeshRenderer>().sharedMaterial = material;
+            return filter;
+        }
+
+        /// <summary>Durchsichtiges, unbeleuchtetes Material (für die Bau-Vorschau).</summary>
+        static Material DurchsichtigUnbeleuchtet(string name, Color farbe)
+        {
+            OrdnerSicherstellen();
+            string pfad = $"{GeneriertOrdner}/{name}.mat";
+            var mat = AssetDatabase.LoadAssetAtPath<Material>(pfad);
+            if (mat == null)
+            {
+                mat = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
+                AssetDatabase.CreateAsset(mat, pfad);
+            }
+            mat.SetColor("_BaseColor", farbe);
+            mat.SetFloat("_Surface", 1f);
+            mat.SetFloat("_Blend", 0f);
+            mat.SetFloat("_ZWrite", 0f);
+            mat.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            mat.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            mat.SetOverrideTag("RenderType", "Transparent");
+            mat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+            EditorUtility.SetDirty(mat);
+            return mat;
         }
 
         static SpielWerte WerteLadenOderAnlegen()

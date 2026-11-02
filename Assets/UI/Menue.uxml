@@ -16,7 +16,7 @@
                 <ui:Label name="raketeText" class="rampe-zeile" picking-mode="Ignore" />
             </ui:VisualElement>
             <ui:VisualElement class="eimerleiste" picking-mode="Ignore">
-                <ui:Label text="Eimer" class="eimer-titel" picking-mode="Ignore" />
+                <ui:Label name="behaelterName" text="Eimer" class="eimer-titel" picking-mode="Ignore" />
                 <ui:VisualElement class="eimer-balken" picking-mode="Ignore">
                     <ui:VisualElement name="eimerFuellung" class="eimer-fuellung" picking-mode="Ignore" />
                 </ui:VisualElement>
@@ -53,6 +53,18 @@
             <ui:VisualElement class="karte">
                 <ui:Label name="verbindenText" text="Verbinde …" class="kartentitel" />
                 <ui:Button name="abbrechen" text="Abbrechen" class="knopf knopf--leise" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+        <!-- Shop (Tab) -->
+        <ui:VisualElement name="shop" class="bildschirm bildschirm--abgedunkelt">
+            <ui:VisualElement class="karte shop-karte">
+                <ui:VisualElement class="shop-kopf">
+                    <ui:Label text="Shop" class="kartentitel shop-ueberschrift" />
+                    <ui:Label name="shopGeld" text="0 Münzen" class="shop-geld" />
+                </ui:VisualElement>
+                <ui:ScrollView name="shopListe" class="shop-liste" />
+                <ui:Button name="shopSchliessen" text="Schließen (Tab)" class="knopf knopf--leise" />
             </ui:VisualElement>
         </ui:VisualElement>
 
