@@ -48,6 +48,9 @@ namespace Ocean
             Zeile(Upgrade.Rohr);
             Bereich("Lager");
             Zeile(Upgrade.Kiste);
+            Bereich("Mars");
+            Zeile(Upgrade.Bildschirm);
+            Zeile(Upgrade.Schuessel);
             Bereich("Rakete");
             Zeile(Upgrade.RaketenLadung);
             Zeile(Upgrade.RaketenFlugzeit);
@@ -137,6 +140,8 @@ namespace Ocean
                 case Upgrade.RaketenFlugzeit: return "Schnellere Rakete";
                 case Upgrade.Rohr: return $"Rohr ({s.werte.rohrPaket} m)";
                 case Upgrade.Kiste: return "Kiste";
+                case Upgrade.Bildschirm: return s.SatellitGestartet ? "Bildschirm" : "Bildschirm + Satellit";
+                case Upgrade.Schuessel: return "Satellitenschüssel";
             }
             return u.ToString();
         }
@@ -162,6 +167,12 @@ namespace Ocean
                     return $"Verbindet Pumpen mit dem Tank · {w.rohrPreisProMeter:0} Münzen pro Meter · bis {w.rohrMaxLaenge:0} m am Stück · im Inventar: {(Lager.Lokal != null ? Lager.Lokal.Anzahl(Gegenstand.Rohr) : 0)} m";
                 case Upgrade.Kiste:
                     return $"Lager mit {w.kistenPlaetze} Plätzen · aufstellen wie eine Pumpe, öffnen mit E";
+                case Upgrade.Bildschirm:
+                    return s.SatellitGestartet
+                        ? "Zeigt das Bild des Satelliten am Mars · in die Hand nehmen, Rechtsklick: groß"
+                        : "Schickt einen Satelliten zum Mars – danach zeigt der Bildschirm sein Bild · braucht eine Satellitenschüssel";
+                case Upgrade.Schuessel:
+                    return $"Empfängt das Satellitenbild · eine reicht für alle · aufgestellt: {Schuessel.Alle.Count}";
                 case Upgrade.RaketenLadung:
                     return $"{s.RaketenLadung:0} l → {s.RaketenLadung * w.ladungMultiplikator:0} l pro Flug";
                 case Upgrade.RaketenFlugzeit:

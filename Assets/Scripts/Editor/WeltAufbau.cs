@@ -26,7 +26,7 @@ namespace Ocean.EditorWerkzeuge
             WeltDaten daten = DatenLadenOderAnlegen();
 
             // Alte Welt, alten Spieler und die Standardkamera der Vorlage entfernen
-            foreach (string name in new[] { "Welt", "Spieler", "Main Camera", "Startpunkte", "Menuekamera", "Netzwerk", "Oberflaeche", "Startrampe", "Spielstand" })
+            foreach (string name in new[] { "Welt", "Spieler", "Main Camera", "Startpunkte", "Menuekamera", "Netzwerk", "Oberflaeche", "Startrampe", "Spielstand", "Mars" })
             {
                 var alt = GameObject.Find(name);
                 if (alt != null) Object.DestroyImmediate(alt);
@@ -102,7 +102,10 @@ namespace Ocean.EditorWerkzeuge
             spielstand.rohrVorlage = rohr;
             var kiste = KistenVorlageErstellen(werte);
             spielstand.kisteVorlage = kiste;
-            NetzwerkAnlegen(daten, SpielerVorlageErstellen(werte), new[] { handpumpe, motorpumpe, rohr, kiste });
+            var schuessel = SchuesselVorlageErstellen();
+            spielstand.schuesselVorlage = schuessel;
+            MarsAnlegen(werte);
+            NetzwerkAnlegen(daten, SpielerVorlageErstellen(werte), new[] { handpumpe, motorpumpe, rohr, kiste, schuessel });
             OptikAufbau.Anwenden(welt.transform);
 
             EditorSceneManager.MarkSceneDirty(welt.scene);
@@ -338,6 +341,7 @@ namespace Ocean.EditorWerkzeuge
             oberflaeche.gameObject.AddComponent<Anzeige>().oberflaeche = oberflaeche;
             oberflaeche.gameObject.AddComponent<ShopFenster>().oberflaeche = oberflaeche;
             oberflaeche.gameObject.AddComponent<InventarFenster>().oberflaeche = oberflaeche;
+            oberflaeche.gameObject.AddComponent<BildschirmAnzeige>().oberflaeche = oberflaeche;
         }
 
         static PanelSettings PanelEinstellungenHolen()
@@ -541,6 +545,61 @@ namespace Ocean.EditorWerkzeuge
             var vorlage = PrefabUtility.SaveAsPrefabAsset(kiste, "Assets/Vorlagen/Kiste.prefab");
             Object.DestroyImmediate(kiste);
             return vorlage;
+        }
+
+        /// <summary>Satellitenschüssel: Sockel, Mast, drehbarer Kopf mit Schüssel und Empfänger.</summary>
+        static GameObject SchuesselVorlageErstellen()
+        {
+            if (!AssetDatabase.IsValidFolder("Assets/Vorlagen")) AssetDatabase.CreateFolder("Assets", "Vorlagen");
+            var weiss = MaterialHolen("Anzug", new Color(0.93f, 0.93f, 0.95f), false);
+            var grau = MaterialHolen("Metall", new Color(0.55f, 0.58f, 0.62f), false);
+            var tuerkis = MaterialHolen("Tuerkis", new Color(0.06f, 0.66f, 0.72f), false);
+
+            var objekt = new GameObject("Satellitenschuessel");
+            var t = objekt.transform;
+            Teil(PrimitiveType.Cylinder, "Sockel", t, new Vector3(0f, 0.08f, 0f), new Vector3(0.7f, 0.08f, 0.7f), grau);
+            Teil(PrimitiveType.Cylinder, "Mast", t, new Vector3(0f, 0.7f, 0f), new Vector3(0.12f, 0.6f, 0.12f), grau);
+            var kopf = new GameObject("Kopf").transform;
+            kopf.SetParent(t, false);
+            kopf.localPosition = new Vector3(0f, 1.35f, 0f);
+            Teil(PrimitiveType.Sphere, "Schuessel", kopf, new Vector3(0f, 0f, 0.05f), new Vector3(1.3f, 1.3f, 0.28f), weiss);
+            Teil(PrimitiveType.Cylinder, "Arm", kopf, new Vector3(0f, 0f, 0.45f), new Vector3(0.04f, 0.4f, 0.04f), grau)
+                .transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            Teil(PrimitiveType.Sphere, "Empfaenger", kopf, new Vector3(0f, 0f, 0.85f), Vector3.one * 0.14f, tuerkis);
+            var kollision = objekt.AddComponent<BoxCollider>();
+            kollision.center = new Vector3(0f, 1f, 0f);
+            kollision.size = new Vector3(1.3f, 2f, 1.3f);
+
+            objekt.AddComponent<NetworkObject>();
+            objekt.AddComponent<Schuessel>().kopf = kopf;
+
+            var vorlage = PrefabUtility.SaveAsPrefabAsset(objekt, "Assets/Vorlagen/Satellitenschuessel.prefab");
+            Object.DestroyImmediate(objekt);
+            return vorlage;
+        }
+
+        /// <summary>Mars-Objekt: das Gelände entsteht im Spiel aus den Spiel-Werten; hier nur Materialien.</summary>
+        static void MarsAnlegen(SpielWerte werte)
+        {
+            OrdnerSicherstellen();
+            const string pfad = GeneriertOrdner + "/Marsboden.mat";
+            var boden = AssetDatabase.LoadAssetAtPath<Material>(pfad);
+            var shader = Shader.Find("Ocean/Vertexfarbe");
+            if (shader == null) Debug.LogWarning("Ocean: Shader „Ocean/Vertexfarbe“ nicht gefunden.");
+            if (boden == null)
+            {
+                boden = new Material(shader != null ? shader : Shader.Find("Universal Render Pipeline/Unlit"));
+                AssetDatabase.CreateAsset(boden, pfad);
+            }
+            else if (shader != null) boden.shader = shader;
+            EditorUtility.SetDirty(boden);
+
+            var mars = new GameObject("Mars").AddComponent<Mars>();
+            mars.werte = werte;
+            mars.bodenMaterial = boden;
+            mars.wasserMaterial = DurchsichtigUnbeleuchtet("Marswasser", new Color(0.10f, 0.50f, 0.78f, 0.88f));
+            mars.himmelMaterial = DurchsichtigUnbeleuchtet("MarsHimmel", new Color(0.95f, 0.58f, 0.40f, 0.95f));
+            mars.weissMaterial = MaterialHolen("Anzug", new Color(0.93f, 0.93f, 0.95f), false);
         }
 
         static MeshFilter SchlauchObjekt(string name, Transform eltern, Material material)

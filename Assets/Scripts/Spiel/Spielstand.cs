@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace Ocean
 {
-    public enum Upgrade { Behaelter, Groesse, Schuhe, Handpumpe, Motorpumpe, RaketenLadung, RaketenFlugzeit, Rohr, Kiste }
+    public enum Upgrade { Behaelter, Groesse, Schuhe, Handpumpe, Motorpumpe, RaketenLadung, RaketenFlugzeit, Rohr, Kiste, Bildschirm, Schuessel }
 
     /// <summary>
     /// Gemeinsamer Spielstand, vom Host verwaltet und an alle verteilt:
@@ -22,9 +22,15 @@ namespace Ocean
         public GameObject motorpumpeVorlage;
         public GameObject rohrVorlage;
         public GameObject kisteVorlage;
+        public GameObject schuesselVorlage;
 
         public readonly NetworkVariable<double> kasse = new NetworkVariable<double>();
         public readonly NetworkVariable<double> geschoepftLiter = new NetworkVariable<double>();
+        /// <summary>Liter, die auf dem Mars angekommen sind (erst bei der Landung der Rakete).</summary>
+        public readonly NetworkVariable<double> marsLiter = new NetworkVariable<double>();
+        /// <summary>Satellit: -1 = nicht gestartet, > 0 = Restflugzeit, 0 = kreist um den Mars.</summary>
+        public readonly NetworkVariable<float> satellitRest = new NetworkVariable<float>(-1f);
+        public readonly NetworkVariable<float> satellitFlugdauer = new NetworkVariable<float>();
 
         // Stufen (Netcode erkennt nur einzelne Felder, keine Listen – daher je ein Feld)
         readonly NetworkVariable<int> behaelterStufe = new NetworkVariable<int>();
@@ -62,6 +68,13 @@ namespace Ocean
         public float SchuhFaktor => 1f + werte.schuheBonus * schuheStufe.Value;
         public float RaketenLadung => werte.raketeLadung * Mathf.Pow(werte.ladungMultiplikator, ladungStufe.Value);
         public float RaketenFlugzeit => werte.raketeFlugzeit * Mathf.Pow(werte.flugMultiplikator, flugStufe.Value);
+        public bool SatellitGestartet => satellitRest.Value >= 0f;
+        public bool SatellitAngekommen => satellitRest.Value == 0f;
+        /// <summary>Mindestens eine Satellitenschüssel steht.</summary>
+        public bool Empfang => Schuessel.Alle.Count > 0;
+
+        /// <summary>Fassungsvermögen eines Wasserkraters in Litern (Schüssel mit flachem Boden, siehe Mars).</summary>
+        public double KraterLiter => Mars.KraterVolumen(werte) * 1000.0;
 
         public int Stufe(Upgrade u) => u switch
         {
@@ -98,6 +111,8 @@ namespace Ocean
                 case Upgrade.RaketenFlugzeit: return werte.flugPreis * Math.Pow(werte.flugFaktor, s);
                 case Upgrade.Rohr: return werte.rohrPreisProMeter * werte.rohrPaket;   // ein Paket Meter
                 case Upgrade.Kiste: return werte.kistePreis;
+                case Upgrade.Bildschirm: return SatellitGestartet ? werte.bildschirmPreis : werte.bildschirmPreisErster;
+                case Upgrade.Schuessel: return werte.schuesselPreis;
             }
             return 0;
         }
@@ -156,6 +171,12 @@ namespace Ocean
             int menge = g == Gegenstand.Rohr ? werte.rohrPaket : 1;
             if (!lager.Passt(g, menge) || !Bezahlen(u)) return;
             lager.Hinzufuegen(g, menge);
+            if (u == Upgrade.Bildschirm && !SatellitGestartet)
+            {
+                // Der erste Bildschirm schickt den Satelliten los (Hinflug = halbe Raketen-Flugzeit)
+                satellitFlugdauer.Value = RaketenFlugzeit * 0.5f;
+                satellitRest.Value = satellitFlugdauer.Value;
+            }
             if (u == Upgrade.Handpumpe) handpumpen.Value++;
             else if (u == Upgrade.Motorpumpe) motorpumpen.Value++;
         }
@@ -171,6 +192,7 @@ namespace Ocean
                 Gegenstand.Handpumpe => handpumpeVorlage,
                 Gegenstand.Motorpumpe => motorpumpeVorlage,
                 Gegenstand.Kiste => kisteVorlage,
+                Gegenstand.Schuessel => schuesselVorlage,
                 _ => null,
             };
             if (vorlage == null || !lager.EinsNehmen(platz, out _)) return;
@@ -205,7 +227,10 @@ namespace Ocean
 
         void Update()
         {
-            if (!IsSpawned || !IsServer || Time.unscaledTime < naechsteNetzberechnung) return;
+            if (!IsSpawned || !IsServer) return;
+            // Satellit fliegt (Spielzeit – steht im Einzelspieler-Pausemenü still)
+            if (satellitRest.Value > 0f) satellitRest.Value = Mathf.Max(0f, satellitRest.Value - Time.deltaTime);
+            if (Time.unscaledTime < naechsteNetzberechnung) return;
             naechsteNetzberechnung = Time.unscaledTime + 0.5f;
             Rohrnetz.Berechnen(Pumpe.Alle);
         }
@@ -213,6 +238,26 @@ namespace Ocean
         // ---------- Pegel ----------
 
         /// <summary>Wie viele Meter der Pegel bisher gesunken ist.</summary>
+        // ---------- Mars ----------
+
+        /// <summary>Nur auf dem Host: eine Rakete ist auf dem Mars gelandet.</summary>
+        public void MarsAnkunft(double liter)
+        {
+            if (!IsServer || liter <= 0) return;
+            int krater = KraterNummer(marsLiter.Value);
+            marsLiter.Value += liter;
+            EinschlagRpc(krater);
+        }
+
+        /// <summary>Welcher Krater sich gerade füllt (0 = erster).</summary>
+        public int KraterNummer(double liter) => Mathf.Min(werte.kraterAnzahl - 1, (int)(liter / KraterLiter));
+
+        [Rpc(SendTo.ClientsAndHost)]
+        void EinschlagRpc(int krater)
+        {
+            if (Mars.Instanz != null) Mars.Instanz.Einschlag(krater);
+        }
+
         public double PegelSenkung => startRadius - NeuerRadius(geschoepftLiter.Value);
 
         void PegelGeaendert(double alt, double neu) => PegelAnwenden(neu);

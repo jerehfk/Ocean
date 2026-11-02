@@ -471,3 +471,57 @@
     white-space: normal;
     display: none;
 }
+
+/* ---------- Bildschirm (Satellitenbild) ---------- */
+
+.bildschirm-hand {
+    position: absolute;
+    right: 40px;
+    bottom: 140px;
+    width: 470px;
+    padding: 14px;
+    background-color: rgb(34, 40, 48);
+    border-radius: 20px;
+    border-width: 3px;
+    border-color: rgb(70, 80, 92);
+    display: none;
+}
+
+.bildschirm-hand--gross {
+    left: 6%;
+    right: 6%;
+    top: 7%;
+    bottom: 140px;
+    width: auto;
+}
+
+.bildschirm-flaeche {
+    flex-grow: 1;
+    min-height: 246px;
+    border-radius: 10px;
+    background-color: rgb(6, 8, 14);
+    overflow: hidden;
+    justify-content: center;
+}
+
+.bildschirm-bild {
+    position: absolute;
+    left: 0; right: 0; top: 0; bottom: 0;
+    -unity-background-scale-mode: scale-and-crop;
+}
+
+.bildschirm-status {
+    font-size: 20px;
+    -unity-font-style: bold;
+    color: rgb(150, 226, 236);
+    -unity-text-align: middle-center;
+    white-space: normal;
+    padding: 0 20px;
+}
+
+.bildschirm-info {
+    margin-top: 10px;
+    font-size: 16px;
+    color: rgb(200, 214, 220);
+    white-space: normal;
+}

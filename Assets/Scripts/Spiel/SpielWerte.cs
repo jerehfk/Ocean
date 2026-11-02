@@ -77,6 +77,31 @@ namespace Ocean
         [Tooltip("Höchstzahl Meter pro Rohr-Stapel.")]
         public int stapelRohr = 100;
         public int stapelKiste = 5;
+        [Tooltip("Höchstzahl pro Stapel für Bildschirme und Satellitenschüsseln.")]
+        public int stapelGeraet = 5;
+
+        [Header("Mars")]
+        [Tooltip("Erster Bildschirm – startet den Satelliten.")]
+        public float bildschirmPreisErster = 1000f;
+        [Tooltip("Jeder weitere Bildschirm.")]
+        public float bildschirmPreis = 100f;
+        public float schuesselPreis = 500f;
+        [Tooltip("Radius des Mars (m, nicht maßstabsgetreu).")]
+        public float marsRadius = 150f;
+        [Tooltip("Flughöhe des Satelliten über dem Boden (m).")]
+        public float umlaufHoehe = 60f;
+        [Tooltip("Sekunden für eine Runde um den Mars.")]
+        public float umlaufZeit = 90f;
+        [Tooltip("Wie steil die Kamera nach unten schaut (Grad).")]
+        public float kameraNeigung = 50f;
+        [Tooltip("Durchmesser der Wasserkrater (m).")]
+        public float kraterDurchmesser = 12f;
+        [Tooltip("Tiefe der Wasserkrater (m).")]
+        public float kraterTiefe = 4f;
+        [Tooltip("So viele Wasserkrater liegen auf der Bahn des Satelliten; sie füllen sich nacheinander.")]
+        public int kraterAnzahl = 5;
+        [Tooltip("Höhe des Mars über dem Horizont der Insel (Grad).")]
+        public float marsHoehenwinkel = 35f;
 
         [Header("Rakete")]
         public float raketeLadung = 200f;
