@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fd88ce54b24154145b5cc7b4304bf5d9, type: 3}
+  m_Name: SpielWerte
+  m_EditorClassIdentifier: Assembly-CSharp::Ocean.SpielWerte
+  eimerLiter: 10
+  schoepfZeit: 1
+  reichweite: 4
+  tempoBeladen: 0.9
+  raketeLadung: 200
+  raketeFlugzeit: 60
+  preisProLiter: 1

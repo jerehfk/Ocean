@@ -24,6 +24,8 @@ namespace Ocean
         public float beschleunigung = 40f;
         [Tooltip("Anteil der Steuerbarkeit in der Luft.")]
         [Range(0f, 1f)] public float luftKontrolle = 0.3f;
+        [Tooltip("Wird von außen gesetzt, z. B. 0,9 mit vollem Eimer.")]
+        public float tempoFaktor = 1f;
 
         [Header("Umsehen")]
         public float mausEmpfindlichkeit = 0.1f;
@@ -107,7 +109,7 @@ namespace Ocean
             Vector2 eingabe = Cursor.lockState == CursorLockMode.Locked ? bewegen.ReadValue<Vector2>() : Vector2.zero;
             Vector3 vor = Vector3.ProjectOnPlane(blick.forward, oben).normalized;
             Vector3 rechts = Vector3.Cross(oben, vor);
-            float tempo = sprinten.IsPressed() ? sprintTempo : laufTempo;
+            float tempo = (sprinten.IsPressed() ? sprintTempo : laufTempo) * tempoFaktor;
             Vector3 ziel = Vector3.ClampMagnitude(vor * eingabe.y + rechts * eingabe.x, 1f) * tempo;
 
             float kontrolle = amBoden ? 1f : luftKontrolle;

@@ -9,6 +9,8 @@ namespace Ocean
     [ExecuteAlways]
     public class Wasser : MonoBehaviour
     {
+        public static Wasser Instanz { get; private set; }
+
         [SerializeField, Tooltip("Pegel: Radius der Wasseroberfläche in Metern.")]
         float radius = 500f;
 
@@ -18,7 +20,7 @@ namespace Ocean
             set { radius = Mathf.Max(0f, value); Anwenden(); }
         }
 
-        void OnEnable() => Anwenden();
+        void OnEnable() { Instanz = this; Anwenden(); }
         void OnValidate() => Anwenden();
 
         void Anwenden() => transform.localScale = Vector3.one * radius;
