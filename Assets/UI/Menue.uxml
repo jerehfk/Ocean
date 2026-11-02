@@ -1,6 +1,28 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements">
     <Style src="Menue.uss" />
-    <ui:VisualElement name="wurzel" class="wurzel">
+    <ui:VisualElement name="wurzel" class="wurzel" picking-mode="Ignore">
+
+        <!-- Anzeige im Spiel (liegt unter den Menüs) -->
+        <ui:VisualElement name="anzeige" class="anzeige" picking-mode="Ignore">
+            <ui:VisualElement class="geldleiste" picking-mode="Ignore">
+                <ui:Label name="geld" text="0" class="geld" picking-mode="Ignore" />
+                <ui:Label text="Münzen" class="geld-einheit" picking-mode="Ignore" />
+            </ui:VisualElement>
+            <ui:VisualElement class="fadenkreuz" picking-mode="Ignore" />
+            <ui:Label name="hinweis" class="hinweis-mitte" picking-mode="Ignore" />
+            <ui:VisualElement name="rampeInfo" class="rampe-info" picking-mode="Ignore">
+                <ui:Label text="Startrampe" class="rampe-titel" picking-mode="Ignore" />
+                <ui:Label name="tankText" class="rampe-zeile" picking-mode="Ignore" />
+                <ui:Label name="raketeText" class="rampe-zeile" picking-mode="Ignore" />
+            </ui:VisualElement>
+            <ui:VisualElement class="eimerleiste" picking-mode="Ignore">
+                <ui:Label text="Eimer" class="eimer-titel" picking-mode="Ignore" />
+                <ui:VisualElement class="eimer-balken" picking-mode="Ignore">
+                    <ui:VisualElement name="eimerFuellung" class="eimer-fuellung" picking-mode="Ignore" />
+                </ui:VisualElement>
+                <ui:Label name="eimerText" class="eimer-text" picking-mode="Ignore" />
+            </ui:VisualElement>
+        </ui:VisualElement>
 
         <!-- Hauptmenü: Titel über der Inselansicht -->
         <ui:VisualElement name="hauptmenue" class="bildschirm">

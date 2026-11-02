@@ -125,3 +125,123 @@
     -unity-text-align: middle-center;
     margin-top: 4px;
 }
+
+/* ---------- Anzeige im Spiel ---------- */
+
+.anzeige {
+    position: absolute;
+    left: 0; right: 0; top: 0; bottom: 0;
+    align-items: center;
+    display: none;
+}
+
+.geldleiste {
+    position: absolute;
+    top: 24px;
+    flex-direction: row;
+    align-items: center;
+    padding: 8px 28px;
+    background-color: rgb(250, 252, 252);
+    border-radius: 30px;
+    border-bottom-width: 4px;
+    border-color: rgb(200, 224, 229);
+}
+
+.geld {
+    font-size: 40px;
+    -unity-font-style: bold;
+    color: rgb(18, 58, 72);
+    margin-right: 10px;
+}
+
+.geld-einheit {
+    font-size: 22px;
+    color: rgb(16, 168, 184);
+    -unity-font-style: bold;
+}
+
+.fadenkreuz {
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 8px; height: 8px;
+    margin-left: -4px; margin-top: -4px;
+    border-radius: 4px;
+    background-color: rgba(255, 255, 255, 0.9);
+}
+
+.hinweis-mitte {
+    position: absolute;
+    top: 54%;
+    left: 0; right: 0;
+    font-size: 24px;
+    -unity-font-style: bold;
+    color: rgb(255, 255, 255);
+    -unity-text-align: middle-center;
+    text-shadow: 0 2px 6px rgba(0, 30, 45, 0.8);
+}
+
+.rampe-info {
+    position: absolute;
+    right: 28px;
+    top: 110px;
+    width: 320px;
+    padding: 16px 20px;
+    background-color: rgb(250, 252, 252);
+    border-radius: 18px;
+    border-bottom-width: 4px;
+    border-color: rgb(200, 224, 229);
+}
+
+.rampe-titel {
+    font-size: 22px;
+    -unity-font-style: bold;
+    color: rgb(16, 168, 184);
+    margin-bottom: 4px;
+}
+
+.rampe-zeile {
+    font-size: 20px;
+    color: rgb(18, 58, 72);
+    white-space: normal;
+}
+
+.eimerleiste {
+    position: absolute;
+    bottom: 28px;
+    flex-direction: row;
+    align-items: center;
+    padding: 12px 22px;
+    background-color: rgb(250, 252, 252);
+    border-radius: 22px;
+    border-bottom-width: 4px;
+    border-color: rgb(200, 224, 229);
+}
+
+.eimer-titel {
+    font-size: 20px;
+    -unity-font-style: bold;
+    color: rgb(18, 58, 72);
+    margin-right: 14px;
+}
+
+.eimer-balken {
+    width: 260px;
+    height: 18px;
+    border-radius: 9px;
+    background-color: rgb(225, 237, 240);
+    overflow: hidden;
+}
+
+.eimer-fuellung {
+    height: 100%;
+    width: 0%;
+    border-radius: 9px;
+    background-color: rgb(16, 168, 184);
+}
+
+.eimer-text {
+    font-size: 20px;
+    color: rgb(18, 58, 72);
+    margin-left: 14px;
+    min-width: 80px;
+}

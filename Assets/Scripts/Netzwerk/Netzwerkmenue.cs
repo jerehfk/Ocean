@@ -28,9 +28,13 @@ namespace Ocean
         public UIDocument oberflaeche;
 
         static Netzwerkmenue instanz;
+
+        /// <summary>Hat der lokale Spieler gerade eine Spielfigur (ist also im Spiel)?</summary>
+        public static bool ImSpiel => instanz != null && instanz.imSpiel;
         NetworkManager netz;
         UnityTransport transport;
         int naechsterStartplatz;
+        bool verlaesstSelbst;          // eigenes „Spiel verlassen“ ist kein Fehler – dann keine Meldung
         bool imSpiel;
         string seite = "hauptmenue";   // welche Menüseite außerhalb des Spiels gezeigt wird
 
@@ -87,10 +91,14 @@ namespace Ocean
             Zeigen(verbinden, !imSpiel && verbindet);
             Zeigen(pause, pausiert);
 
+            // Einzelspieler: Pausemenü hält die Spielzeit an. Im Koop läuft die Welt weiter.
+            bool allein = netz.IsHost && !OffenFuerFreunde();
+            Time.timeScale = pausiert && allein ? 0f : 1f;
+
             if (pausiert)
                 pauseInfo.text = !netz.IsServer ? "Verbunden als Gast"
                     : OffenFuerFreunde() ? $"Spiel offen – deine IP: {EigeneIp()}   ·   Spieler: {netz.ConnectedClientsIds.Count}"
-                    : "Allein";
+                    : "Allein · Spiel angehalten";
         }
 
         static void Zeigen(VisualElement element, bool sichtbar) =>
@@ -98,6 +106,7 @@ namespace Ocean
 
         void OnDestroy()
         {
+            Time.timeScale = 1f;
             if (netz != null) netz.OnClientDisconnectCallback -= Getrennt;
         }
 
@@ -108,6 +117,7 @@ namespace Ocean
             if (spielerVorlage == null) { Meldung = "Keine Spielfigur hinterlegt."; return false; }
             if (!netz.NetworkConfig.Prefabs.Contains(spielerVorlage)) netz.AddNetworkPrefab(spielerVorlage);
             naechsterStartplatz = 0;
+            verlaesstSelbst = false;
             return true;
         }
 
@@ -147,6 +157,8 @@ namespace Ocean
 
         void Verlassen()
         {
+            verlaesstSelbst = true;
+            Meldung = "";
             netz.Shutdown();
             EigenerSpielerVerschwunden();
         }
@@ -170,6 +182,7 @@ namespace Ocean
         {
             // Nur reagieren, wenn es um die eigene Verbindung geht (als Gast: Host weg oder abgelehnt)
             if (netz.IsServer && spielerNummer != NetworkManager.ServerClientId) return;
+            if (verlaesstSelbst) { EigenerSpielerVerschwunden(); return; }
             Meldung = string.IsNullOrEmpty(netz.DisconnectReason) ? "Verbindung getrennt oder Host nicht gefunden." : netz.DisconnectReason;
             seite = "freunde";
             EigenerSpielerVerschwunden();
