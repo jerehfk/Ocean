@@ -1,0 +1,48 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <Style src="Menue.uss" />
+    <ui:VisualElement name="wurzel" class="wurzel">
+
+        <!-- Hauptmenü: Titel über der Inselansicht -->
+        <ui:VisualElement name="hauptmenue" class="bildschirm">
+            <ui:Label text="OCEAN" class="titel" />
+            <ui:Label text="Schöpf den Ozean leer." class="untertitel" />
+            <ui:VisualElement class="karte">
+                <ui:Button name="allein" text="Allein spielen" class="knopf knopf--haupt" />
+                <ui:Button name="zuFreunden" text="Mit Freunden spielen" class="knopf" />
+                <ui:Button name="beenden" text="Beenden" class="knopf knopf--leise" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+        <!-- Mit Freunden: öffnen oder beitreten -->
+        <ui:VisualElement name="freunde" class="bildschirm">
+            <ui:VisualElement class="karte">
+                <ui:Label text="Mit Freunden" class="kartentitel" />
+                <ui:Button name="oeffnen" text="Spiel öffnen" class="knopf knopf--haupt" />
+                <ui:Label text="oder einem Spiel beitreten (IP des Hosts):" class="hinweis" />
+                <ui:TextField name="ip" value="127.0.0.1" class="eingabe" />
+                <ui:Button name="beitreten" text="Beitreten" class="knopf" />
+                <ui:Label name="meldung" class="meldung" />
+                <ui:Button name="zurueck" text="Zurück" class="knopf knopf--leise" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+        <!-- Während des Verbindens -->
+        <ui:VisualElement name="verbinden" class="bildschirm bildschirm--abgedunkelt">
+            <ui:VisualElement class="karte">
+                <ui:Label name="verbindenText" text="Verbinde …" class="kartentitel" />
+                <ui:Button name="abbrechen" text="Abbrechen" class="knopf knopf--leise" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+        <!-- Pause im Spiel (Esc) -->
+        <ui:VisualElement name="pause" class="bildschirm bildschirm--abgedunkelt">
+            <ui:VisualElement class="karte">
+                <ui:Label text="Pause" class="kartentitel" />
+                <ui:Label name="pauseInfo" class="hinweis" />
+                <ui:Button name="weiter" text="Weiterspielen" class="knopf knopf--haupt" />
+                <ui:Button name="verlassen" text="Spiel verlassen" class="knopf knopf--leise" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+    </ui:VisualElement>
+</ui:UXML>

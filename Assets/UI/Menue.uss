@@ -1,0 +1,127 @@
+/* Menüs: helle, deckende Karten mit runden Ecken, Türkis als Akzent */
+
+.wurzel {
+    flex-grow: 1;
+}
+
+.bildschirm {
+    position: absolute;
+    left: 0; right: 0; top: 0; bottom: 0;
+    align-items: center;
+    justify-content: center;
+    display: none;
+}
+
+.bildschirm--abgedunkelt {
+    background-color: rgba(4, 22, 32, 0.6);
+}
+
+.titel {
+    font-size: 132px;
+    -unity-font-style: bold;
+    letter-spacing: 24px;
+    color: rgb(255, 255, 255);
+    -unity-text-align: middle-center;
+    text-shadow: 0 6px 16px rgba(0, 35, 55, 0.65);
+    margin-bottom: 0;
+}
+
+.untertitel {
+    font-size: 28px;
+    color: rgb(240, 251, 253);
+    -unity-text-align: middle-center;
+    text-shadow: 0 2px 8px rgba(0, 35, 55, 0.7);
+    margin-bottom: 40px;
+}
+
+.karte {
+    width: 480px;
+    padding: 30px 36px;
+    background-color: rgb(250, 252, 252);
+    border-radius: 24px;
+    border-bottom-width: 6px;
+    border-color: rgb(200, 224, 229);
+}
+
+.kartentitel {
+    font-size: 36px;
+    -unity-font-style: bold;
+    color: rgb(18, 58, 72);
+    -unity-text-align: middle-center;
+    margin-bottom: 16px;
+}
+
+.knopf {
+    height: 64px;
+    margin: 7px 0;
+    border-radius: 16px;
+    border-width: 0;
+    font-size: 24px;
+    -unity-font-style: bold;
+    color: rgb(18, 58, 72);
+    background-color: rgb(233, 243, 245);
+    transition-property: background-color, scale;
+    transition-duration: 0.12s;
+}
+
+.knopf:hover {
+    background-color: rgb(212, 235, 239);
+    scale: 1.03 1.03;
+}
+
+.knopf:active {
+    scale: 0.97 0.97;
+}
+
+.knopf--haupt {
+    background-color: rgb(16, 168, 184);
+    color: rgb(255, 255, 255);
+}
+
+.knopf--haupt:hover {
+    background-color: rgb(12, 148, 164);
+}
+
+.knopf--leise {
+    height: 48px;
+    font-size: 20px;
+    color: rgb(88, 118, 128);
+    background-color: rgba(0, 0, 0, 0);
+}
+
+.knopf--leise:hover {
+    background-color: rgb(233, 243, 245);
+}
+
+.hinweis {
+    font-size: 18px;
+    color: rgb(88, 118, 128);
+    white-space: normal;
+    -unity-text-align: middle-center;
+    margin-top: 14px;
+    margin-bottom: 2px;
+}
+
+.eingabe {
+    height: 56px;
+    margin: 7px 0;
+}
+
+.eingabe > .unity-text-field__input {
+    font-size: 24px;
+    padding-left: 16px;
+    border-radius: 14px;
+    border-width: 2px;
+    border-color: rgb(200, 224, 229);
+    background-color: rgb(233, 243, 245);
+    color: rgb(18, 58, 72);
+    -unity-text-align: middle-left;
+}
+
+.meldung {
+    font-size: 18px;
+    color: rgb(196, 64, 64);
+    white-space: normal;
+    -unity-text-align: middle-center;
+    margin-top: 4px;
+}
