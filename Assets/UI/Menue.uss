@@ -291,6 +291,21 @@
     font-size: 22px;
 }
 
+.shop-reiter {
+    flex-direction: row;
+    margin-bottom: 8px;
+}
+
+.shop-reiter-knopf {
+    flex-grow: 1;
+    margin-right: 8px;
+}
+
+.shop-reiter--aktiv {
+    background-color: rgb(6, 168, 184);
+    color: rgb(255, 255, 255);
+}
+
 .shop-knopf:disabled {
     background-color: rgb(200, 214, 218);
     color: rgb(240, 245, 246);

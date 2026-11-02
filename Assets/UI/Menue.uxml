@@ -75,7 +75,7 @@
             <ui:Label name="geist" class="platz-geist" picking-mode="Ignore" />
         </ui:VisualElement>
 
-        <!-- Shop (B) -->
+        <!-- Shop (Tresen im Shop-Gebäude, E) -->
         <ui:VisualElement name="shop" class="bildschirm bildschirm--abgedunkelt">
             <ui:VisualElement class="karte shop-karte">
                 <ui:VisualElement class="shop-kopf">
@@ -84,7 +84,7 @@
                 </ui:VisualElement>
                 <ui:Label name="shopMeldung" class="shop-meldung" />
                 <ui:ScrollView name="shopListe" class="shop-liste" />
-                <ui:Button name="shopSchliessen" text="Schließen (B)" class="knopf knopf--leise" />
+                <ui:Button name="shopSchliessen" text="Schließen (Esc)" class="knopf knopf--leise" />
             </ui:VisualElement>
         </ui:VisualElement>
 

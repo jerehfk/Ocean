@@ -103,6 +103,36 @@ namespace Ocean
         [Tooltip("Höhe des Mars über dem Horizont der Insel (Grad).")]
         public float marsHoehenwinkel = 35f;
 
+        [Serializable]
+        public class Forschungsknoten
+        {
+            public Forschung art;
+            public string name;
+            [TextArea] public string beschreibung;
+            public float preis;
+            [Tooltip("Muss vorher erforscht sein (Keine = von Anfang an erforschbar).")]
+            public Forschung voraussetzung;
+        }
+
+        [Header("Forschungsbaum (schaltet Shop-Einträge frei)")]
+        public Forschungsknoten[] forschung =
+        {
+            new Forschungsknoten { art = Forschung.Lagerbau,      name = "Lagerbau",      beschreibung = "Kisten im Shop",                    preis = 250f,  voraussetzung = Forschung.Keine },
+            new Forschungsknoten { art = Forschung.Pumpentechnik, name = "Pumpentechnik", beschreibung = "Handpumpen und Rohre im Shop",     preis = 1500f, voraussetzung = Forschung.Keine },
+            new Forschungsknoten { art = Forschung.Motorantrieb,  name = "Motorantrieb",  beschreibung = "Motorpumpen im Shop",               preis = 4000f, voraussetzung = Forschung.Pumpentechnik },
+            new Forschungsknoten { art = Forschung.Raumfahrt,     name = "Raumfahrt",     beschreibung = "Bildschirme und Satellitenschüsseln", preis = 800f,  voraussetzung = Forschung.Lagerbau },
+        };
+
+        public Forschungsknoten Knoten(Forschung f)
+        {
+            foreach (var k in forschung) if (k.art == f) return k;
+            return new Forschungsknoten { art = f, name = f.ToString() };
+        }
+
+        [Header("Shop-Gebäude")]
+        [Tooltip("So weit darf man sich vom Tresen entfernen, solange der Shop offen ist (m).")]
+        public float shopAbstand = 9f;
+
         [Header("Rakete")]
         public float raketeLadung = 200f;
         [Tooltip("Sekunden für Hin- und Rückflug.")]

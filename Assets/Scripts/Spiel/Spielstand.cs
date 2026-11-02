@@ -6,10 +6,14 @@ namespace Ocean
 {
     public enum Upgrade { Behaelter, Groesse, Schuhe, Handpumpe, Motorpumpe, RaketenLadung, RaketenFlugzeit, Rohr, Kiste, Bildschirm, Schuessel }
 
+    /// <summary>Forschungsknoten im Forschungsbaum (Zahlen und Texte in SpielWerte.forschung).</summary>
+    public enum Forschung { Keine = 0, Pumpentechnik = 1, Motorantrieb = 2, Lagerbau = 3, Raumfahrt = 4 }
+
     /// <summary>
     /// Gemeinsamer Spielstand, vom Host verwaltet und an alle verteilt:
     /// Kasse (gehört allen), geschöpfte Liter (daraus der Pegel) und die Stufen aller Upgrades.
     /// Upgrades gelten für alle Spieler. Kaufen und Aufstellen laufen über den Host.
+    /// Was im Shop zu kaufen ist, schaltet die Forschung frei (Forschungsbaum, bezahlt aus der gemeinsamen Kasse).
     /// Pumpen, Rohre und Kisten landen beim Kauf im Inventar des Käufers (nur wenn Platz ist)
     /// und werden von dort aufgestellt bzw. verlegt.
     /// </summary>
@@ -40,6 +44,8 @@ namespace Ocean
         readonly NetworkVariable<int> motorpumpen = new NetworkVariable<int>();
         readonly NetworkVariable<int> ladungStufe = new NetworkVariable<int>();
         readonly NetworkVariable<int> flugStufe = new NetworkVariable<int>();
+        /// <summary>Erforschte Knoten als Bitmaske (Bit = Wert von Forschung).</summary>
+        readonly NetworkVariable<int> erforscht = new NetworkVariable<int>();
 
         Wasser wasser;
         double startRadius;
@@ -117,7 +123,27 @@ namespace Ocean
             return 0;
         }
 
-        public bool Leistbar(Upgrade u) => !Maximal(u) && kasse.Value >= Math.Round(Preis(u));
+        public bool Leistbar(Upgrade u) => Freigeschaltet(u) && !Maximal(u) && kasse.Value >= Math.Round(Preis(u));
+
+        // ---------- Forschung ----------
+
+        /// <summary>Welche Forschung man für diesen Shop-Eintrag braucht.</summary>
+        public static Forschung Benoetigt(Upgrade u) => u switch
+        {
+            Upgrade.Handpumpe or Upgrade.Rohr => Forschung.Pumpentechnik,
+            Upgrade.Motorpumpe => Forschung.Motorantrieb,
+            Upgrade.Kiste => Forschung.Lagerbau,
+            Upgrade.Bildschirm or Upgrade.Schuessel => Forschung.Raumfahrt,
+            _ => Forschung.Keine,
+        };
+
+        public bool Erforscht(Forschung f) => f == Forschung.Keine || (erforscht.Value & (1 << (int)f)) != 0;
+        public bool Freigeschaltet(Upgrade u) => Erforscht(Benoetigt(u));
+
+        /// <summary>Noch nicht erforscht, aber die Voraussetzung ist erfüllt.</summary>
+        public bool ForschungOffen(Forschung f) => !Erforscht(f) && Erforscht(werte.Knoten(f).voraussetzung);
+
+        public bool ForschungLeistbar(Forschung f) => ForschungOffen(f) && kasse.Value >= Math.Round(werte.Knoten(f).preis);
 
         // ---------- Nur auf dem Host ----------
 
@@ -158,6 +184,16 @@ namespace Ocean
                 case Upgrade.RaketenLadung: ladungStufe.Value++; break;
                 case Upgrade.RaketenFlugzeit: flugStufe.Value++; break;
             }
+        }
+
+        /// <summary>Einen Forschungsknoten erforschen (gilt für alle Spieler).</summary>
+        [Rpc(SendTo.Server, RequireOwnership = false)]
+        public void ForschenRpc(int forschung)
+        {
+            var f = (Forschung)forschung;
+            if (f == Forschung.Keine || !ForschungLeistbar(f)) return;
+            kasse.Value -= Math.Round(werte.Knoten(f).preis);
+            erforscht.Value |= 1 << (int)f;
         }
 
         /// <summary>Pumpe, Rohr oder Kiste kaufen – nur, wenn im Inventar des Käufers Platz ist.</summary>
