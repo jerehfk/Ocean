@@ -15,13 +15,7 @@
                 <ui:Label name="tankText" class="rampe-zeile" picking-mode="Ignore" />
                 <ui:Label name="raketeText" class="rampe-zeile" picking-mode="Ignore" />
             </ui:VisualElement>
-            <ui:VisualElement class="eimerleiste" picking-mode="Ignore">
-                <ui:Label name="behaelterName" text="Eimer" class="eimer-titel" picking-mode="Ignore" />
-                <ui:VisualElement class="eimer-balken" picking-mode="Ignore">
-                    <ui:VisualElement name="eimerFuellung" class="eimer-fuellung" picking-mode="Ignore" />
-                </ui:VisualElement>
-                <ui:Label name="eimerText" class="eimer-text" picking-mode="Ignore" />
-            </ui:VisualElement>
+            <ui:VisualElement name="schnellleiste" class="schnellleiste" picking-mode="Ignore" />
         </ui:VisualElement>
 
         <!-- Hauptmenü: Titel über der Inselansicht -->
@@ -56,15 +50,34 @@
             </ui:VisualElement>
         </ui:VisualElement>
 
-        <!-- Shop (Tab) -->
+        <!-- Inventar (Tab) und Kiste (E) -->
+        <ui:VisualElement name="inventar" class="bildschirm bildschirm--abgedunkelt">
+            <ui:VisualElement class="inventar-reihe" picking-mode="Ignore">
+                <ui:VisualElement name="inventarKarte" class="karte lager-karte">
+                    <ui:Label text="Inventar" class="kartentitel" />
+                    <ui:VisualElement name="rucksack" class="lager-raster" />
+                    <ui:Label text="Schnellleiste (Taste 1 = Behälter)" class="lager-untertitel" />
+                    <ui:VisualElement name="schnellRaster" class="lager-raster" />
+                </ui:VisualElement>
+                <ui:VisualElement name="kisteKarte" class="karte lager-karte">
+                    <ui:Label text="Kiste" class="kartentitel" />
+                    <ui:VisualElement name="kisteRaster" class="lager-raster lager-raster--kiste" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:Label text="Ziehen: verschieben · Umschalt + Klick: auf die andere Seite · Tab oder Esc: schließen" class="inventar-tipp" picking-mode="Ignore" />
+            <ui:Label name="geist" class="platz-geist" picking-mode="Ignore" />
+        </ui:VisualElement>
+
+        <!-- Shop (B) -->
         <ui:VisualElement name="shop" class="bildschirm bildschirm--abgedunkelt">
             <ui:VisualElement class="karte shop-karte">
                 <ui:VisualElement class="shop-kopf">
                     <ui:Label text="Shop" class="kartentitel shop-ueberschrift" />
                     <ui:Label name="shopGeld" text="0 Münzen" class="shop-geld" />
                 </ui:VisualElement>
+                <ui:Label name="shopMeldung" class="shop-meldung" />
                 <ui:ScrollView name="shopListe" class="shop-liste" />
-                <ui:Button name="shopSchliessen" text="Schließen (Tab)" class="knopf knopf--leise" />
+                <ui:Button name="shopSchliessen" text="Schließen (B)" class="knopf knopf--leise" />
             </ui:VisualElement>
         </ui:VisualElement>
 

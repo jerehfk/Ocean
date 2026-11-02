@@ -6,9 +6,10 @@ using UnityEngine.UIElements;
 namespace Ocean
 {
     /// <summary>
-    /// Shop (Tab öffnet/schließt, Esc schließt). Zeigt alle Upgrades nach Bereichen mit Wirkung,
-    /// Stufe und Preis; zu teure sind ausgegraut. Pumpen werden nicht sofort gekauft, sondern
-    /// starten den Baumodus – bezahlt wird beim Aufstellen. Das Spiel läuft weiter, auch allein.
+    /// Shop (B öffnet/schließt, Esc schließt). Zeigt alle Upgrades nach Bereichen mit Wirkung,
+    /// Stufe und Preis; zu teure sind ausgegraut. Pumpen, Rohre und Kisten landen im Inventar –
+    /// ist dort kein Platz, geht der Kauf nicht. Das Spiel läuft weiter, auch allein.
+    /// (Übergangslösung bis zum Shop-Gebäude in Etappe 7.)
     /// </summary>
     public class ShopFenster : MonoBehaviour
     {
@@ -22,7 +23,7 @@ namespace Ocean
         bool offen;
         VisualElement fenster;
         ScrollView liste;
-        Label geld;
+        Label geld, meldung;
         readonly List<(Upgrade upgrade, Label titel, Label text, Button knopf)> zeilen = new();
 
         void Awake() => instanz = this;
@@ -33,6 +34,7 @@ namespace Ocean
             fenster = wurzel.Q("shop");
             liste = wurzel.Q<ScrollView>("shopListe");
             geld = wurzel.Q<Label>("shopGeld");
+            meldung = wurzel.Q<Label>("shopMeldung");
             wurzel.Q<Button>("shopSchliessen").clicked += Schliessen;
 
             Bereich("Behälter");
@@ -44,6 +46,8 @@ namespace Ocean
             Zeile(Upgrade.Handpumpe);
             Zeile(Upgrade.Motorpumpe);
             Zeile(Upgrade.Rohr);
+            Bereich("Lager");
+            Zeile(Upgrade.Kiste);
             Bereich("Rakete");
             Zeile(Upgrade.RaketenLadung);
             Zeile(Upgrade.RaketenFlugzeit);
@@ -53,12 +57,11 @@ namespace Ocean
         {
             if (instanz == null) return;
             if (instanz.offen) Schliessen();
-            else if (Netzwerkmenue.ImSpiel && UnityEngine.Cursor.lockState == CursorLockMode.Locked) instanz.Oeffnen();
+            else if (Netzwerkmenue.ImSpiel && UnityEngine.Cursor.lockState == CursorLockMode.Locked && !InventarFenster.Offen) instanz.Oeffnen();
         }
 
         void Oeffnen()
         {
-            if (Bauen.Aktiv) Bauen.Lokal.Abbrechen();
             offen = true;
             UnityEngine.Cursor.lockState = CursorLockMode.None;
         }
@@ -80,28 +83,41 @@ namespace Ocean
             var stand = Spielstand.Instanz;
             if (stand == null) return;
             geld.text = $"{stand.kasse.Value.ToString("N0", Deutsch)} Münzen";
+            var lager = Lager.Lokal;
+            bool voll = lager != null && lager.FreiePlaetze == 0;
+            if (meldung != null)
+            {
+                meldung.text = voll ? "Inventar voll – leg erst etwas in eine Kiste (Tab), sonst passt nur noch etwas auf angefangene Stapel." : "";
+                meldung.style.display = voll ? DisplayStyle.Flex : DisplayStyle.None;
+            }
 
             foreach (var (u, titel, text, knopf) in zeilen)
             {
                 titel.text = Titel(stand, u);
                 text.text = Beschreibung(stand, u);
                 bool maximal = stand.Maximal(u);
-                knopf.text = maximal ? "Max." : u == Upgrade.Rohr ? $"{stand.Preis(u):0} / m"
+                bool passt = Passt(stand, u);
+                knopf.text = maximal ? "Max." : !passt ? "Kein Platz"
                     : $"{System.Math.Round(stand.Preis(u)).ToString("N0", Deutsch)}";
-                knopf.SetEnabled(!maximal && stand.Leistbar(u));
+                knopf.SetEnabled(!maximal && passt && stand.Leistbar(u));
             }
         }
 
         void Kaufen(Upgrade u)
         {
             var stand = Spielstand.Instanz;
-            if (stand == null || !stand.IsSpawned || !stand.Leistbar(u)) return;
-            if (u == Upgrade.Handpumpe || u == Upgrade.Motorpumpe || u == Upgrade.Rohr)
-            {
-                Schliessen();
-                if (Bauen.Lokal != null) Bauen.Lokal.Starten(u == Upgrade.Handpumpe ? 0 : u == Upgrade.Motorpumpe ? 1 : 2);
-            }
+            if (stand == null || !stand.IsSpawned || !stand.Leistbar(u) || !Passt(stand, u)) return;
+            if (GegenstandInfo.AusUpgrade(u) != Gegenstand.Nichts) stand.GegenstandKaufenRpc((int)u);
             else stand.KaufenRpc((int)u);
+        }
+
+        /// <summary>Gegenstände brauchen Platz im Inventar; Upgrades immer.</summary>
+        static bool Passt(Spielstand stand, Upgrade u)
+        {
+            var g = GegenstandInfo.AusUpgrade(u);
+            if (g == Gegenstand.Nichts) return true;
+            var lager = Lager.Lokal;
+            return lager != null && lager.Passt(g, g == Gegenstand.Rohr ? stand.werte.rohrPaket : 1);
         }
 
         // ---------- Texte ----------
@@ -119,7 +135,8 @@ namespace Ocean
                 case Upgrade.Motorpumpe: return "Motorpumpe";
                 case Upgrade.RaketenLadung: return "Größerer Raketentank";
                 case Upgrade.RaketenFlugzeit: return "Schnellere Rakete";
-                case Upgrade.Rohr: return "Rohre verlegen";
+                case Upgrade.Rohr: return $"Rohr ({s.werte.rohrPaket} m)";
+                case Upgrade.Kiste: return "Kiste";
             }
             return u.ToString();
         }
@@ -138,11 +155,13 @@ namespace Ocean
                 case Upgrade.Schuhe:
                     return $"+{w.schuheBonus * 100:0} % Lauftempo · Stufe {s.Stufe(u)}/{w.schuheMax}";
                 case Upgrade.Handpumpe:
-                    return $"{w.handpumpeLeistung:0} l/s, solange du pumpst · braucht Saugschlauch im Wasser und Rohr zum Tank · aufgestellt: {s.Stufe(u)}";
+                    return $"{w.handpumpeLeistung:0} l/s, solange du pumpst · braucht Saugschlauch im Wasser und Rohr zum Tank · gekauft: {s.Stufe(u)}";
                 case Upgrade.Motorpumpe:
-                    return $"{w.motorpumpeLeistung:0} l/s, läuft von allein · braucht Saugschlauch im Wasser und Rohr zum Tank · aufgestellt: {s.Stufe(u)}";
+                    return $"{w.motorpumpeLeistung:0} l/s, läuft von allein · braucht Saugschlauch im Wasser und Rohr zum Tank · gekauft: {s.Stufe(u)}";
                 case Upgrade.Rohr:
-                    return $"Verbindet Pumpen mit dem Tank · {w.rohrPreisProMeter:0} Münzen pro Meter · bis {w.rohrMaxLaenge:0} m am Stück";
+                    return $"Verbindet Pumpen mit dem Tank · {w.rohrPreisProMeter:0} Münzen pro Meter · bis {w.rohrMaxLaenge:0} m am Stück · im Inventar: {(Lager.Lokal != null ? Lager.Lokal.Anzahl(Gegenstand.Rohr) : 0)} m";
+                case Upgrade.Kiste:
+                    return $"Lager mit {w.kistenPlaetze} Plätzen · aufstellen wie eine Pumpe, öffnen mit E";
                 case Upgrade.RaketenLadung:
                     return $"{s.RaketenLadung:0} l → {s.RaketenLadung * w.ladungMultiplikator:0} l pro Flug";
                 case Upgrade.RaketenFlugzeit:

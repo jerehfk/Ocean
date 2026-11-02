@@ -46,18 +46,20 @@ namespace Ocean
         }
 
         /// <summary>
-        /// Punkte des Rohrs: auf der Kugel von A nach B, dazwischen knapp über dem Boden
-        /// (auch unter Wasser am Meeresgrund). Die Enden bleiben genau an A und B.
+        /// Punkte des Rohrs: liegt auf dem Boden (auch unter Wasser am Meeresgrund) und biegt erst
+        /// auf dem letzten Stück zu den Anschlüssen hoch. Die Enden bleiben genau an A und B.
         /// </summary>
         public static List<Vector3> Verlauf(Vector3 a, Vector3 b)
         {
+            const float Uebergang = 0.6f;   // so lang ist der Bogen vom Boden hoch zum Anschluss (m)
             var punkte = new List<Vector3>();
             var schwerkraft = PlanetSchwerkraft.Instanz;
             if (schwerkraft == null) { punkte.Add(a); punkte.Add(b); return punkte; }
 
             Vector3 mitte = schwerkraft.transform.position;
             Vector3 da = a - mitte, db = b - mitte;
-            int abschnitte = Mathf.Clamp(Mathf.CeilToInt(Vector3.Distance(a, b) / 0.5f), 2, 80);
+            float laenge = Vector3.Distance(a, b);
+            int abschnitte = Mathf.Clamp(Mathf.CeilToInt(laenge / 0.25f), 2, 120);
             for (int i = 0; i <= abschnitte; i++)
             {
                 float t = (float)i / abschnitte;
@@ -65,10 +67,13 @@ namespace Ocean
                 Vector3 punkt = mitte + richtung * Mathf.Lerp(da.magnitude, db.magnitude, t);
                 if (i > 0 && i < abschnitte && Baugrund.BodenUnter(punkt, richtung, out Vector3 boden))
                 {
-                    // Nicht unter den Boden, aber auch nicht höher als die gerade Verbindung
                     float bodenHoehe = Vector3.Distance(boden, mitte) + Radius + 0.02f;
                     float geradeHoehe = Vector3.Distance(punkt, mitte);
-                    punkt = mitte + richtung * Mathf.Max(bodenHoehe, Mathf.Min(geradeHoehe, bodenHoehe + 0.3f));
+                    // Abstand zum näheren Ende: dort weich vom Boden zur Höhe des Anschlusses
+                    float zumEnde = Mathf.Min(t, 1f - t) * laenge;
+                    float boden01 = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(zumEnde / Uebergang));
+                    float hoehe = Mathf.Lerp(geradeHoehe, bodenHoehe, boden01);
+                    punkt = mitte + richtung * Mathf.Max(bodenHoehe, hoehe);
                 }
                 punkte.Add(punkt);
             }

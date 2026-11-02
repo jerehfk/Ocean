@@ -41,6 +41,16 @@ MonoBehaviour:
   motorpumpeLeistung: 10
   motorpumpePreis: 5000
   motorpumpeFaktor: 1.12
+  schlauchLaenge: 8
+  rohrPreisProMeter: 4
+  rohrPaket: 10
+  rohrMaxLaenge: 20
+  rucksackPlaetze: 20
+  kistenPlaetze: 24
+  kistePreis: 300
+  stapelPumpe: 10
+  stapelRohr: 100
+  stapelKiste: 5
   raketeLadung: 200
   raketeFlugzeit: 60
   ladungMultiplikator: 1.5
@@ -50,4 +60,4 @@ MonoBehaviour:
   flugPreis: 250
   flugFaktor: 2.2
   flugMax: 8
-  preisProLiter: 10000
+  preisProLiter: 1

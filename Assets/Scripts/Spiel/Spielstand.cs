@@ -4,12 +4,14 @@ using UnityEngine;
 
 namespace Ocean
 {
-    public enum Upgrade { Behaelter, Groesse, Schuhe, Handpumpe, Motorpumpe, RaketenLadung, RaketenFlugzeit, Rohr }
+    public enum Upgrade { Behaelter, Groesse, Schuhe, Handpumpe, Motorpumpe, RaketenLadung, RaketenFlugzeit, Rohr, Kiste }
 
     /// <summary>
     /// Gemeinsamer Spielstand, vom Host verwaltet und an alle verteilt:
     /// Kasse (gehört allen), geschöpfte Liter (daraus der Pegel) und die Stufen aller Upgrades.
     /// Upgrades gelten für alle Spieler. Kaufen und Aufstellen laufen über den Host.
+    /// Pumpen, Rohre und Kisten landen beim Kauf im Inventar des Käufers (nur wenn Platz ist)
+    /// und werden von dort aufgestellt bzw. verlegt.
     /// </summary>
     public class Spielstand : NetworkBehaviour
     {
@@ -19,6 +21,7 @@ namespace Ocean
         public GameObject handpumpeVorlage;
         public GameObject motorpumpeVorlage;
         public GameObject rohrVorlage;
+        public GameObject kisteVorlage;
 
         public readonly NetworkVariable<double> kasse = new NetworkVariable<double>();
         public readonly NetworkVariable<double> geschoepftLiter = new NetworkVariable<double>();
@@ -69,7 +72,7 @@ namespace Ocean
             Upgrade.Motorpumpe => motorpumpen.Value,
             Upgrade.RaketenLadung => ladungStufe.Value,
             Upgrade.RaketenFlugzeit => flugStufe.Value,
-            _ => 0,   // Rohr: keine Stufen
+            _ => 0,   // Rohr, Kiste: keine Stufen
         };
 
         public bool Maximal(Upgrade u) => u switch
@@ -93,7 +96,8 @@ namespace Ocean
                 case Upgrade.Motorpumpe: return werte.motorpumpePreis * Math.Pow(werte.motorpumpeFaktor, s);
                 case Upgrade.RaketenLadung: return werte.ladungPreis * Math.Pow(werte.ladungFaktor, s);
                 case Upgrade.RaketenFlugzeit: return werte.flugPreis * Math.Pow(werte.flugFaktor, s);
-                case Upgrade.Rohr: return werte.rohrPreisProMeter;   // je Meter
+                case Upgrade.Rohr: return werte.rohrPreisProMeter * werte.rohrPaket;   // ein Paket Meter
+                case Upgrade.Kiste: return werte.kistePreis;
             }
             return 0;
         }
@@ -129,7 +133,7 @@ namespace Ocean
         public void KaufenRpc(int upgrade)
         {
             var u = (Upgrade)upgrade;
-            if (u == Upgrade.Handpumpe || u == Upgrade.Motorpumpe || u == Upgrade.Rohr) return;
+            if (GegenstandInfo.AusUpgrade(u) != Gegenstand.Nichts) return;   // Gegenstände: GegenstandKaufenRpc
             if (!Bezahlen(u)) return;
             switch (u)
             {
@@ -141,27 +145,47 @@ namespace Ocean
             }
         }
 
-        /// <summary>Pumpe kaufen und an der gewünschten Stelle aufstellen (art 0 = Hand, 1 = Motor).</summary>
+        /// <summary>Pumpe, Rohr oder Kiste kaufen – nur, wenn im Inventar des Käufers Platz ist.</summary>
         [Rpc(SendTo.Server, RequireOwnership = false)]
-        public void PlatzierenRpc(int art, Vector3 position, Quaternion drehung)
+        public void GegenstandKaufenRpc(int upgrade, RpcParams anfrage = default)
         {
-            var u = art == 0 ? Upgrade.Handpumpe : Upgrade.Motorpumpe;
-            var vorlage = art == 0 ? handpumpeVorlage : motorpumpeVorlage;
-            if (vorlage == null || !Bezahlen(u)) return;
-            if (art == 0) handpumpen.Value++; else motorpumpen.Value++;
-            var pumpe = Instantiate(vorlage, position, drehung);
-            pumpe.GetComponent<NetworkObject>().Spawn();
+            var u = (Upgrade)upgrade;
+            var g = GegenstandInfo.AusUpgrade(u);
+            var lager = SpielerLager(anfrage.Receive.SenderClientId);
+            if (g == Gegenstand.Nichts || lager == null) return;
+            int menge = g == Gegenstand.Rohr ? werte.rohrPaket : 1;
+            if (!lager.Passt(g, menge) || !Bezahlen(u)) return;
+            lager.Hinzufuegen(g, menge);
+            if (u == Upgrade.Handpumpe) handpumpen.Value++;
+            else if (u == Upgrade.Motorpumpe) motorpumpen.Value++;
         }
 
-        /// <summary>Rohrstück von A nach B legen; Preis je Meter (auf ganze Münzen aufgerundet).</summary>
+        /// <summary>Pumpe oder Kiste vom gewählten Schnellleisten-Platz aufstellen.</summary>
         [Rpc(SendTo.Server, RequireOwnership = false)]
-        public void RohrLegenRpc(Vector3 anfang, Vector3 ende)
+        public void PlatzierenRpc(int platz, Vector3 position, Quaternion drehung, RpcParams anfrage = default)
+        {
+            var lager = SpielerLager(anfrage.Receive.SenderClientId);
+            if (lager == null) return;
+            var vorlage = lager.Platz(platz).art switch
+            {
+                Gegenstand.Handpumpe => handpumpeVorlage,
+                Gegenstand.Motorpumpe => motorpumpeVorlage,
+                Gegenstand.Kiste => kisteVorlage,
+                _ => null,
+            };
+            if (vorlage == null || !lager.EinsNehmen(platz, out _)) return;
+            var objekt = Instantiate(vorlage, position, drehung);
+            objekt.GetComponent<NetworkObject>().Spawn();
+        }
+
+        /// <summary>Rohrstück von A nach B legen; verbraucht die Meter (aufgerundet) aus dem Inventar.</summary>
+        [Rpc(SendTo.Server, RequireOwnership = false)]
+        public void RohrLegenRpc(Vector3 anfang, Vector3 ende, RpcParams anfrage = default)
         {
             float laenge = Vector3.Distance(anfang, ende);
-            if (rohrVorlage == null || laenge < 0.3f || laenge > werte.rohrMaxLaenge + 0.5f) return;
-            double preis = RohrPreis(laenge);
-            if (kasse.Value < preis) return;
-            kasse.Value -= preis;
+            var lager = SpielerLager(anfrage.Receive.SenderClientId);
+            if (rohrVorlage == null || lager == null || laenge < 0.3f || laenge > werte.rohrMaxLaenge + 0.5f) return;
+            if (!lager.Entfernen(Gegenstand.Rohr, RohrMeter(laenge))) return;
             var objekt = Instantiate(rohrVorlage);
             var rohr = objekt.GetComponent<Rohr>();
             rohr.anfang.Value = anfang;
@@ -169,7 +193,12 @@ namespace Ocean
             objekt.GetComponent<NetworkObject>().Spawn();
         }
 
-        public double RohrPreis(float laenge) => Math.Ceiling(laenge * werte.rohrPreisProMeter);
+        /// <summary>So viele Meter Rohr verbraucht ein Stück dieser Länge.</summary>
+        public static int RohrMeter(float laenge) => Mathf.Max(1, Mathf.CeilToInt(laenge - 0.01f));
+
+        Lager SpielerLager(ulong spieler) =>
+            NetworkManager.ConnectedClients.TryGetValue(spieler, out var client) && client.PlayerObject != null
+                ? client.PlayerObject.GetComponent<Lager>() : null;
 
         // Rohrnetz regelmäßig neu berechnen (welche Pumpen sind mit dem Tank verbunden?)
         float naechsteNetzberechnung;

@@ -5,11 +5,12 @@ using UnityEngine.InputSystem;
 namespace Ocean
 {
     /// <summary>
-    /// Baumodus. Pumpen: durchsichtige Vorschau am Fadenkreuz, grün = erlaubt, rot = nicht erlaubt;
-    /// Linksklick = aufstellen (erst dann wird bezahlt), R = drehen. Erlaubt: fester Boden (Insel, Steg,
+    /// Baumodus – läuft, solange in der Schnellleiste ein Gegenstand gewählt ist (siehe Schnellleiste).
+    /// Pumpen und Kisten: durchsichtige Vorschau am Fadenkreuz, grün = erlaubt, rot = nicht erlaubt;
+    /// Linksklick = aufstellen (nimmt einen aus dem Inventar), R = drehen. Erlaubt: fester Boden (Insel, Steg,
     /// Meeresboden), über dem Wasser, nichts im Weg. Den Saugschlauch legt man danach selbst.
-    /// Rohre: Klick = Anfang, Klick = Ende (rastet an Anschlüssen ein), danach geht es am Ende weiter.
-    /// Rechtsklick oder Esc beendet den Baumodus.
+    /// Rohre: Klick = Anfang, Klick = Ende (rastet an Anschlüssen ein, verbraucht die Meter), danach geht es
+    /// am Ende weiter; Rechtsklick setzt neu an.
     /// </summary>
     public class Bauen : NetworkBehaviour
     {
@@ -24,7 +25,8 @@ namespace Ocean
 
         public string Hinweis { get; private set; } = "";
 
-        int art = -1;             // 0 = Handpumpe, 1 = Motorpumpe, 2 = Rohr, -1 = nicht im Baumodus
+        int art = -1;             // 0 = Handpumpe, 1 = Motorpumpe, 2 = Rohr, 3 = Kiste, -1 = nicht im Baumodus
+        int platz = -1;           // Schnellleisten-Platz im Inventar, aus dem gebaut wird
         GameObject vorschau;
         MeshRenderer[] vorschauTeile;
         float drehung;
@@ -40,12 +42,30 @@ namespace Ocean
         public override void OnNetworkSpawn() { if (IsOwner) Lokal = this; }
         public override void OnNetworkDespawn() { if (Lokal == this) Lokal = null; Abbrechen(); }
 
-        public void Starten(int neueArt)
+        static int ArtVon(Gegenstand g) => g switch
+        {
+            Gegenstand.Handpumpe => 0,
+            Gegenstand.Motorpumpe => 1,
+            Gegenstand.Rohr => 2,
+            Gegenstand.Kiste => 3,
+            _ => -1,
+        };
+
+        /// <summary>Baumodus für diesen Gegenstand und Platz – tut nichts, wenn er schon läuft.</summary>
+        public void Sicherstellen(Gegenstand g, int neuerPlatz)
+        {
+            int neueArt = ArtVon(g);
+            if (neueArt == art && neuerPlatz == platz) return;
+            Starten(neueArt, neuerPlatz);
+        }
+
+        void Starten(int neueArt, int neuerPlatz)
         {
             Abbrechen();
             var stand = Spielstand.Instanz;
-            if (stand == null) return;
+            if (stand == null || neueArt < 0) return;
             art = neueArt;
+            platz = neuerPlatz;
             if (art == 2)
             {
                 vorschau = new GameObject("Rohr-Vorschau");
@@ -55,7 +75,7 @@ namespace Ocean
                 rohrAnfangGesetzt = false;
                 return;
             }
-            var vorlage = art == 0 ? stand.handpumpeVorlage : stand.motorpumpeVorlage;
+            var vorlage = art == 0 ? stand.handpumpeVorlage : art == 1 ? stand.motorpumpeVorlage : stand.kisteVorlage;
             if (vorlage == null) { art = -1; return; }
             vorschau = VorschauBauen(vorlage);
         }
@@ -63,6 +83,7 @@ namespace Ocean
         public void Abbrechen()
         {
             art = -1;
+            platz = -1;
             blickZumWasser = Vector3.zero;
             Hinweis = "";
             if (vorschau != null) Destroy(vorschau);
@@ -73,24 +94,30 @@ namespace Ocean
         {
             if (!IsOwner || art < 0) return;
 
-            // Pausemenü geöffnet → Bauen abbrechen
-            if (Cursor.lockState != CursorLockMode.Locked) { if (!ShopFenster.Offen) Abbrechen(); return; }
+            // Menü oder Fenster offen → Vorschau ausblenden, Baumodus bleibt gewählt
+            if (Cursor.lockState != CursorLockMode.Locked)
+            {
+                if (vorschau != null) vorschau.SetActive(false);
+                Hinweis = "";
+                return;
+            }
             var maus = Mouse.current;
-            if (maus != null && maus.rightButton.wasPressedThisFrame) { Abbrechen(); return; }
             if (Keyboard.current != null && Keyboard.current.rKey.wasPressedThisFrame) drehung += 45f;
+            if (vorschau != null && art == 2) vorschau.SetActive(true);
 
             if (art == 2) { RohrBauen(maus); return; }
 
             var stand = Spielstand.Instanz;
             var schwerkraft = PlanetSchwerkraft.Instanz;
-            var u = art == 0 ? Upgrade.Handpumpe : Upgrade.Motorpumpe;
-            string name = art == 0 ? "Handpumpe" : "Motorpumpe";
+            var lager = Lager.Lokal;
+            int vorrat = lager != null ? lager.Platz(platz).menge : 0;
+            string name = art == 0 ? "Handpumpe" : art == 1 ? "Motorpumpe" : "Kiste";
 
             var strahl = new Ray(kamera.transform.position, kamera.transform.forward);
             if (!Physics.Raycast(strahl, out RaycastHit treffer, bauReichweite, ~0, QueryTriggerInteraction.Ignore))
             {
                 vorschau.SetActive(false);
-                Hinweis = $"{name}: auf den Boden zielen · Rechtsklick abbrechen";
+                Hinweis = $"{name}: auf den Boden zielen";
                 return;
             }
 
@@ -99,7 +126,8 @@ namespace Ocean
             // Einlass (Vorderseite) zeigt automatisch zum Wasser; R dreht zusätzlich.
             // Die Richtung ist ein Mittelwert über viele Messpunkte (zeigt quer zur Uferlinie)
             // und wird zeitlich geglättet, damit die Vorschau nicht hin- und herspringt.
-            Vector3 ziel = WasserRichtung(position, oben);
+            // Kiste: Vorderseite zum Spieler. Pumpe: Einlass zum Wasser.
+            Vector3 ziel = art == 3 ? Vector3.ProjectOnPlane(-kamera.transform.forward, oben).normalized : WasserRichtung(position, oben);
             if (ziel.sqrMagnitude < 0.001f) ziel = Vector3.ProjectOnPlane(kamera.transform.forward, oben).normalized;
             if (blickZumWasser.sqrMagnitude < 0.001f) blickZumWasser = ziel;
             blickZumWasser = Vector3.Slerp(blickZumWasser, ziel, 1f - Mathf.Exp(-8f * Time.unscaledDeltaTime));
@@ -108,8 +136,7 @@ namespace Ocean
             Quaternion ausrichtung = Quaternion.LookRotation(Quaternion.AngleAxis(drehung, oben) * vor.normalized, oben);
 
             string grund = Pruefen(treffer, position);
-            double preis = System.Math.Round(stand.Preis(u));
-            if (grund == null && stand.kasse.Value < preis) grund = "Nicht genug Münzen";
+            if (grund == null && vorrat <= 0) grund = $"Keine {name} mehr im Inventar";
             bool erlaubt = grund == null;
 
             vorschau.SetActive(true);
@@ -117,14 +144,11 @@ namespace Ocean
             foreach (var teil in vorschauTeile) teil.sharedMaterial = erlaubt ? vorschauErlaubt : vorschauVerboten;
 
             Hinweis = erlaubt
-                ? $"Klick: {name} aufstellen ({preis:N0} Münzen) · R drehen · Rechtsklick abbrechen"
-                : $"{grund} · Rechtsklick abbrechen";
+                ? $"Klick: {name} aufstellen (noch {vorrat}) · R drehen · 1: Behälter in die Hand"
+                : grund;
 
             if (erlaubt && maus != null && maus.leftButton.wasPressedThisFrame && stand.IsSpawned)
-            {
-                stand.PlatzierenRpc(art, position, ausrichtung);
-                Abbrechen();
-            }
+                stand.PlatzierenRpc(platz, position, ausrichtung);
         }
 
         /// <summary>Gibt den Grund zurück, warum hier nicht gebaut werden darf – oder null, wenn alles passt.</summary>
@@ -149,6 +173,8 @@ namespace Ocean
         void RohrBauen(Mouse maus)
         {
             var stand = Spielstand.Instanz;
+            int meter = Lager.Lokal != null ? Lager.Lokal.Anzahl(Gegenstand.Rohr) : 0;
+            if (maus != null && maus.rightButton.wasPressedThisFrame) rohrAnfangGesetzt = false;   // neu ansetzen
             var strahl = new Ray(kamera.transform.position, kamera.transform.forward);
             bool trifft = Physics.Raycast(strahl, out RaycastHit treffer, bauReichweite, ~0, QueryTriggerInteraction.Ignore);
 
@@ -163,9 +189,9 @@ namespace Ocean
             if (!rohrAnfangGesetzt)
             {
                 rohrVorschau.sharedMesh = null;
-                Hinweis = !gueltigerPunkt ? "Rohr: auf den Boden oder einen Anschluss zielen · Rechtsklick beenden"
-                        : eingerastet ? "Klick: Rohr hier am Anschluss beginnen · Rechtsklick beenden"
-                        : "Klick: Rohr hier beginnen (besser an einem Anschluss) · Rechtsklick beenden";
+                Hinweis = !gueltigerPunkt ? $"Rohr ({meter} m): auf den Boden oder einen Anschluss zielen"
+                        : eingerastet ? $"Klick: Rohr hier am Anschluss beginnen ({meter} m im Inventar)"
+                        : $"Klick: Rohr hier beginnen, besser an einem Anschluss ({meter} m im Inventar)";
                 if (gueltigerPunkt && maus != null && maus.leftButton.wasPressedThisFrame)
                 {
                     rohrAnfang = punkt;
@@ -175,11 +201,11 @@ namespace Ocean
             }
 
             float laenge = Vector3.Distance(rohrAnfang, punkt);
-            double preis = stand.RohrPreis(laenge);
+            int braucht = Spielstand.RohrMeter(laenge);
             string grund = !gueltigerPunkt ? "Auf den Boden oder einen Anschluss zielen"
                          : laenge < 0.3f ? "Zu kurz"
                          : laenge > stand.werte.rohrMaxLaenge ? $"Zu lang (höchstens {stand.werte.rohrMaxLaenge:0} m am Stück)"
-                         : stand.kasse.Value < preis ? "Nicht genug Münzen"
+                         : meter < braucht ? $"Nicht genug Rohr ({meter} m im Inventar)"
                          : null;
 
             if (laenge >= 0.05f)
@@ -188,8 +214,8 @@ namespace Ocean
                 rohrVorschauRenderer.sharedMaterial = grund == null ? vorschauErlaubt : vorschauVerboten;
             }
             Hinweis = grund == null
-                ? $"Klick: Rohr legen ({laenge:0.0} m, {preis:N0} Münzen){(eingerastet ? " · rastet am Anschluss ein" : "")} · Rechtsklick beenden"
-                : $"{grund} · Rechtsklick beenden";
+                ? $"Klick: Rohr legen ({braucht} m von {meter} m){(eingerastet ? " · rastet am Anschluss ein" : "")} · Rechtsklick: neu ansetzen"
+                : $"{grund} · Rechtsklick: neu ansetzen";
 
             if (grund == null && maus != null && maus.leftButton.wasPressedThisFrame && stand.IsSpawned)
             {
