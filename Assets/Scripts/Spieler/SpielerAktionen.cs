@@ -6,7 +6,8 @@ namespace Ocean
 {
     /// <summary>
     /// Was der Spieler mit der Maus tut: Wasser schöpfen, Behälter in den Tank kippen, Rakete starten,
-    /// an der Handpumpe pumpen (Maustaste halten).
+    /// an der Handpumpe pumpen (Maustaste halten), Kiste öffnen (E).
+    /// Schöpfen und Kippen nur mit dem Behälter in der Hand (Schnellleiste Platz 1).
     /// Gezielt wird mit der Bildmitte (Fadenkreuz), geklickt mit der linken Maustaste.
     /// Der Eimer-Inhalt gehört dem Spieler selbst und wird an alle übertragen (damit andere
     /// sehen, ob er voll ist).
@@ -62,6 +63,23 @@ namespace Ocean
             float beladen = eimerLiter.Value > 0f && stand != null ? stand.AktuellerBehaelter.tempoVoll : 1f;
             steuerung.tempoFaktor = schuhe * beladen;
             Hinweis = "";
+            bool inDerHand = Schnellleiste.Lokal == null || Schnellleiste.Lokal.BehaelterInDerHand;
+
+            // Kiste öffnen geht immer (auch mit einem Gegenstand in der Hand)
+            if (Cursor.lockState == CursorLockMode.Locked && getragen == null && schoepfen < 0f)
+            {
+                var blick = new Ray(kamera.transform.position, kamera.transform.forward);
+                if (Physics.Raycast(blick, out RaycastHit kistenTreffer, werte.reichweite, ~0, QueryTriggerInteraction.Ignore))
+                {
+                    var kiste = kistenTreffer.collider.GetComponentInParent<Lager>();
+                    if (kiste != null && kiste.istKiste && kiste.IsSpawned)
+                    {
+                        if (!Bauen.Aktiv) Hinweis = "E: Kiste öffnen";
+                        if (Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame) { InventarFenster.KisteOeffnen(kiste); return; }
+                        if (!Bauen.Aktiv) return;
+                    }
+                }
+            }
             if (Bauen.Aktiv) return;   // im Baumodus zeigt der Baumodus seine Hinweise
 
             // Schöpfen läuft gerade (Spielzeit: steht im Einzelspieler-Pausemenü still)
@@ -95,6 +113,7 @@ namespace Ocean
             // 1. Tank an der Startrampe
             if (trifft && rampe != null && treffer.collider == rampe.tankZiel)
             {
+                if (!inDerHand) { Hinweis = "Taste 1: Behälter in die Hand nehmen"; return; }
                 if (eimerLiter.Value > 0f)
                 {
                     Hinweis = $"Klick: {BehaelterName} in den Tank kippen";
@@ -132,7 +151,7 @@ namespace Ocean
                 }
                 if (!pumpe.Verbunden)
                 {
-                    Hinweis = "Nicht mit dem Tank verbunden – Rohr verlegen (Tab → Rohre) · E: Saugschlauch umlegen";
+                    Hinweis = "Nicht mit dem Tank verbunden – Rohr verlegen (Shop: B) · E: Saugschlauch umlegen";
                     if (taste) SchlauchNehmen(pumpe);
                     return;
                 }
@@ -154,7 +173,7 @@ namespace Ocean
             gepumpt = 0f;
 
             // 4. Wasser: liegt die Wasseroberfläche in Reichweite und vor allem anderen?
-            if (eimerLiter.Value < Kapazitaet - 0.01f && WasserInReichweite(strahl, trifft ? treffer.distance : float.MaxValue))
+            if (inDerHand && eimerLiter.Value < Kapazitaet - 0.01f && WasserInReichweite(strahl, trifft ? treffer.distance : float.MaxValue))
             {
                 Hinweis = $"Klick: Wasser schöpfen ({BehaelterName}, {Kapazitaet:0} l)";
                 if (klick) schoepfen = 0f;
@@ -232,12 +251,14 @@ namespace Ocean
             if (behaelterModelle == null || behaelterModelle.Length == 0) return;
             int nummer = Spielstand.Instanz != null ? Mathf.Clamp(Spielstand.Instanz.BehaelterNummer, 0, behaelterModelle.Length - 1) : 0;
             bool voll = eimerLiter.Value > 0f || schoepfen >= 0f;
+            // Fremde Figuren zeigen immer den Behälter, die eigene nur, wenn er gewählt ist
+            bool inDerHand = !IsOwner || Schnellleiste.Lokal == null || Schnellleiste.Lokal.BehaelterInDerHand;
             // Beim Schöpfen taucht der Behälter kurz nach unten ein
             float eintauchen = schoepfen >= 0f ? Mathf.Sin(Mathf.PI * schoepfen) * 0.35f : 0f;
 
             for (int i = 0; i < behaelterModelle.Length; i++)
             {
-                bool aktiv = i == nummer;
+                bool aktiv = i == nummer && inDerHand;
                 if (behaelterModelle[i].gameObject.activeSelf != aktiv) behaelterModelle[i].gameObject.SetActive(aktiv);
                 if (!aktiv) continue;
                 behaelterModelle[i].localPosition = ruhe[i] + Vector3.down * eintauchen;

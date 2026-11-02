@@ -6,7 +6,8 @@ namespace Ocean
 {
     /// <summary>
     /// Anzeige im Spiel (HUD): Geld oben, Fadenkreuz und Hinweis in der Mitte,
-    /// Eimer unten, Tank und Rakete rechts, sobald man in der Nähe der Startrampe ist.
+    /// Tank und Rakete rechts, sobald man in der Nähe der Startrampe ist.
+    /// (Die Schnellleiste unten mit dem Behälter zeichnet das InventarFenster.)
     /// Elemente stehen in Assets/UI/Menue.uxml im Block „anzeige“.
     /// </summary>
     public class Anzeige : MonoBehaviour
@@ -17,21 +18,18 @@ namespace Ocean
 
         static readonly CultureInfo Deutsch = CultureInfo.GetCultureInfo("de-DE");
 
-        VisualElement anzeige, eimerFuellung, rampeInfo;
-        Label geld, hinweis, eimerText, tankText, raketeText, behaelterName;
+        VisualElement anzeige, rampeInfo;
+        Label geld, hinweis, tankText, raketeText;
 
         void Start()
         {
             var wurzel = oberflaeche.rootVisualElement;
             anzeige = wurzel.Q("anzeige");
-            eimerFuellung = wurzel.Q("eimerFuellung");
             rampeInfo = wurzel.Q("rampeInfo");
             geld = wurzel.Q<Label>("geld");
             hinweis = wurzel.Q<Label>("hinweis");
-            eimerText = wurzel.Q<Label>("eimerText");
             tankText = wurzel.Q<Label>("tankText");
             raketeText = wurzel.Q<Label>("raketeText");
-            behaelterName = wurzel.Q<Label>("behaelterName");
         }
 
         void Update()
@@ -45,10 +43,6 @@ namespace Ocean
             var stand = Spielstand.Instanz;
             geld.text = stand != null ? stand.kasse.Value.ToString("N0", Deutsch) : "0";
             hinweis.text = Bauen.Aktiv ? Bauen.Lokal.Hinweis : spieler.Hinweis;
-
-            eimerFuellung.style.width = Length.Percent(Mathf.Clamp01(spieler.Fuellstand) * 100f);
-            eimerText.text = $"{spieler.eimerLiter.Value:0} / {spieler.Kapazitaet:0} l";
-            behaelterName.text = spieler.BehaelterName;
 
             var rampe = Startrampe.Instanz;
             bool nah = rampe != null && Vector3.Distance(spieler.transform.position, rampe.transform.position) < rampenNaehe;

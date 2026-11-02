@@ -100,7 +100,9 @@ namespace Ocean.EditorWerkzeuge
             spielstand.motorpumpeVorlage = motorpumpe;
             var rohr = RohrVorlageErstellen();
             spielstand.rohrVorlage = rohr;
-            NetzwerkAnlegen(daten, SpielerVorlageErstellen(werte), new[] { handpumpe, motorpumpe, rohr });
+            var kiste = KistenVorlageErstellen(werte);
+            spielstand.kisteVorlage = kiste;
+            NetzwerkAnlegen(daten, SpielerVorlageErstellen(werte), new[] { handpumpe, motorpumpe, rohr, kiste });
             OptikAufbau.Anwenden(welt.transform);
 
             EditorSceneManager.MarkSceneDirty(welt.scene);
@@ -245,6 +247,12 @@ namespace Ocean.EditorWerkzeuge
             bauen.vorschauErlaubt = DurchsichtigUnbeleuchtet("VorschauErlaubt", new Color(0.25f, 0.95f, 0.45f, 0.45f));
             bauen.vorschauVerboten = DurchsichtigUnbeleuchtet("VorschauVerboten", new Color(0.95f, 0.25f, 0.20f, 0.45f));
 
+            // Inventar: Schnellleiste (7) + Rucksack
+            var inventar = spieler.AddComponent<Lager>();
+            inventar.groesse = Lager.SchnellPlaetze + werte.rucksackPlaetze;
+            inventar.istKiste = false;
+            spieler.AddComponent<Schnellleiste>().bauen = bauen;
+
             var netz = spieler.AddComponent<SpielerNetz>();
             netz.steuerung = steuerung;
             netz.kamera = kamera;
@@ -329,6 +337,7 @@ namespace Ocean.EditorWerkzeuge
             menue.oberflaeche = oberflaeche;
             oberflaeche.gameObject.AddComponent<Anzeige>().oberflaeche = oberflaeche;
             oberflaeche.gameObject.AddComponent<ShopFenster>().oberflaeche = oberflaeche;
+            oberflaeche.gameObject.AddComponent<InventarFenster>().oberflaeche = oberflaeche;
         }
 
         static PanelSettings PanelEinstellungenHolen()
@@ -502,6 +511,35 @@ namespace Ocean.EditorWerkzeuge
             logik.anschlussMaterial = MaterialHolen("Tuerkis", new Color(0.06f, 0.66f, 0.72f), false);
             var vorlage = PrefabUtility.SaveAsPrefabAsset(rohr, "Assets/Vorlagen/Rohr.prefab");
             Object.DestroyImmediate(rohr);
+            return vorlage;
+        }
+
+        /// <summary>Kiste: Holzkasten mit Deckel und Beschlägen; Lager mit Plätzen aus den Spiel-Werten.</summary>
+        static GameObject KistenVorlageErstellen(SpielWerte werte)
+        {
+            if (!AssetDatabase.IsValidFolder("Assets/Vorlagen")) AssetDatabase.CreateFolder("Assets", "Vorlagen");
+            var holz = MaterialHolen("Kistenholz", new Color(0.62f, 0.44f, 0.26f), false);
+            var dunkel = MaterialHolen("Holz", new Color(0.36f, 0.24f, 0.14f), false);
+            var metall = MaterialHolen("Metall", new Color(0.55f, 0.58f, 0.62f), false);
+
+            var kiste = new GameObject("Kiste");
+            var t = kiste.transform;
+            Teil(PrimitiveType.Cube, "Kasten", t, new Vector3(0f, 0.3f, 0f), new Vector3(1.1f, 0.6f, 0.7f), holz);
+            Teil(PrimitiveType.Cube, "Deckel", t, new Vector3(0f, 0.66f, 0f), new Vector3(1.14f, 0.12f, 0.74f), dunkel);
+            Teil(PrimitiveType.Cube, "Band links", t, new Vector3(-0.4f, 0.36f, 0f), new Vector3(0.06f, 0.74f, 0.76f), metall);
+            Teil(PrimitiveType.Cube, "Band rechts", t, new Vector3(0.4f, 0.36f, 0f), new Vector3(0.06f, 0.74f, 0.76f), metall);
+            Teil(PrimitiveType.Cube, "Schloss", t, new Vector3(0f, 0.55f, 0.37f), new Vector3(0.12f, 0.14f, 0.04f), metall);
+            var kollision = kiste.AddComponent<BoxCollider>();
+            kollision.center = new Vector3(0f, 0.36f, 0f);
+            kollision.size = new Vector3(1.14f, 0.72f, 0.74f);
+
+            kiste.AddComponent<NetworkObject>();
+            var lager = kiste.AddComponent<Lager>();
+            lager.groesse = werte.kistenPlaetze;
+            lager.istKiste = true;
+
+            var vorlage = PrefabUtility.SaveAsPrefabAsset(kiste, "Assets/Vorlagen/Kiste.prefab");
+            Object.DestroyImmediate(kiste);
             return vorlage;
         }
 

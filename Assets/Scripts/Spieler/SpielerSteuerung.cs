@@ -69,13 +69,21 @@ namespace Ocean
 
         void Update()
         {
-            // Tab: Shop auf/zu. Esc: Shop zu – sonst Pausemenü auf/zu (Maus frei = Pause)
+            // Tab: Inventar auf/zu. B: Shop auf/zu. Esc: offenes Fenster zu – sonst Pausemenü auf/zu (Maus frei = Pause)
             var tastatur = Keyboard.current;
             if (tastatur != null && tastatur.tabKey.wasPressedThisFrame)
-                ShopFenster.Umschalten();
-            else if (tastatur != null && tastatur.escapeKey.wasPressedThisFrame)
             {
                 if (ShopFenster.Offen) ShopFenster.Schliessen();
+                InventarFenster.Umschalten();
+            }
+            else if (tastatur != null && tastatur.bKey.wasPressedThisFrame)
+            {
+                if (InventarFenster.Offen) InventarFenster.Schliessen();
+                ShopFenster.Umschalten();
+            }
+            else if (tastatur != null && tastatur.escapeKey.wasPressedThisFrame)
+            {
+                if (Fenster.Offen) Fenster.AlleSchliessen();
                 else Cursor.lockState = Cursor.lockState == CursorLockMode.Locked ? CursorLockMode.None : CursorLockMode.Locked;
             }
 

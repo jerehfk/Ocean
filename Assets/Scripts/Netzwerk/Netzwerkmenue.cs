@@ -86,7 +86,7 @@ namespace Ocean
         {
             if (hauptmenue == null) return;
             bool verbindet = netz.IsClient && !netz.IsConnectedClient;
-            bool pausiert = imSpiel && UnityEngine.Cursor.lockState != CursorLockMode.Locked && !ShopFenster.Offen;
+            bool pausiert = imSpiel && UnityEngine.Cursor.lockState != CursorLockMode.Locked && !Fenster.Offen;
 
             Zeigen(hauptmenue, !imSpiel && !verbindet && seite == "hauptmenue");
             Zeigen(freunde, !imSpiel && !verbindet && seite == "freunde");

@@ -205,27 +205,8 @@
     white-space: normal;
 }
 
-.eimerleiste {
-    position: absolute;
-    bottom: 28px;
-    flex-direction: row;
-    align-items: center;
-    padding: 12px 22px;
-    background-color: rgb(250, 252, 252);
-    border-radius: 22px;
-    border-bottom-width: 4px;
-    border-color: rgb(200, 224, 229);
-}
-
-.eimer-titel {
-    font-size: 20px;
-    -unity-font-style: bold;
-    color: rgb(18, 58, 72);
-    margin-right: 14px;
-}
-
 .eimer-balken {
-    width: 260px;
+    width: 100%;
     height: 18px;
     border-radius: 9px;
     background-color: rgb(225, 237, 240);
@@ -237,13 +218,6 @@
     width: 0%;
     border-radius: 9px;
     background-color: rgb(16, 168, 184);
-}
-
-.eimer-text {
-    font-size: 20px;
-    color: rgb(18, 58, 72);
-    margin-left: 14px;
-    min-width: 80px;
 }
 
 /* ---------- Shop ---------- */
@@ -321,4 +295,179 @@
     background-color: rgb(200, 214, 218);
     color: rgb(240, 245, 246);
     scale: 1 1;
+}
+
+/* ---------- Schnellleiste im Bild ---------- */
+
+.schnellleiste {
+    position: absolute;
+    bottom: 24px;
+    flex-direction: row;
+    align-items: flex-end;
+}
+
+.leiste-platz {
+    width: 104px;
+    height: 92px;
+    margin: 0 4px;
+    padding: 8px 10px;
+    background-color: rgba(250, 252, 252, 0.92);
+    border-radius: 16px;
+    border-width: 3px;
+    border-color: rgba(0, 0, 0, 0);
+    border-bottom-color: rgb(200, 224, 229);
+    overflow: hidden;
+}
+
+.leiste-platz--behaelter {
+    width: 220px;
+}
+
+.leiste-platz--gewaehlt {
+    border-color: rgb(16, 168, 184);
+    translate: 0 -8px;
+}
+
+.leiste-taste {
+    position: absolute;
+    top: 4px;
+    right: 9px;
+    font-size: 15px;
+    -unity-font-style: bold;
+    color: rgb(140, 165, 172);
+}
+
+.leiste-name {
+    font-size: 17px;
+    -unity-font-style: bold;
+    color: rgb(18, 58, 72);
+    white-space: normal;
+    margin-top: 12px;
+    margin-bottom: 4px;
+}
+
+.leiste-menge {
+    font-size: 17px;
+    color: rgb(88, 118, 128);
+    margin-top: 4px;
+}
+
+/* ---------- Inventar und Kiste ---------- */
+
+.inventar-reihe {
+    flex-direction: row;
+    align-items: flex-start;
+}
+
+.lager-karte {
+    width: auto;
+    margin: 0 14px;
+}
+
+.lager-raster {
+    flex-direction: row;
+    flex-wrap: wrap;
+    width: 540px;
+}
+
+.lager-raster--kiste {
+    width: 648px;
+}
+
+.lager-untertitel {
+    font-size: 18px;
+    -unity-font-style: bold;
+    color: rgb(88, 118, 128);
+    margin-top: 14px;
+    margin-bottom: 6px;
+    letter-spacing: 1px;
+}
+
+.platz {
+    width: 96px;
+    height: 96px;
+    margin: 6px;
+    padding: 8px;
+    border-radius: 14px;
+    background-color: rgb(233, 243, 245);
+    border-width: 2px;
+    border-color: rgb(212, 230, 234);
+    overflow: hidden;
+}
+
+.platz:hover {
+    border-color: rgb(16, 168, 184);
+}
+
+.platz--gezogen {
+    opacity: 0.35;
+}
+
+.platz-farbe {
+    position: absolute;
+    left: 0; right: 0; top: 0;
+    height: 8px;
+}
+
+.leiste-platz > .platz-farbe {
+    height: 6px;
+}
+
+.platz-taste {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    font-size: 14px;
+    -unity-font-style: bold;
+    color: rgb(140, 165, 172);
+}
+
+.platz-name {
+    font-size: 16px;
+    -unity-font-style: bold;
+    color: rgb(18, 58, 72);
+    white-space: normal;
+    margin-top: 10px;
+}
+
+.platz-menge {
+    position: absolute;
+    bottom: 6px;
+    right: 10px;
+    font-size: 18px;
+    -unity-font-style: bold;
+    color: rgb(16, 168, 184);
+}
+
+.inventar-tipp {
+    margin-top: 16px;
+    font-size: 18px;
+    color: rgb(240, 251, 253);
+    text-shadow: 0 2px 6px rgba(0, 30, 45, 0.8);
+}
+
+.platz-geist {
+    position: absolute;
+    width: 96px;
+    height: 96px;
+    padding: 8px;
+    border-radius: 14px;
+    background-color: rgba(16, 168, 184, 0.85);
+    color: rgb(255, 255, 255);
+    font-size: 16px;
+    -unity-font-style: bold;
+    white-space: normal;
+    display: none;
+}
+
+.shop-meldung {
+    font-size: 19px;
+    -unity-font-style: bold;
+    color: rgb(196, 64, 64);
+    background-color: rgb(253, 236, 234);
+    border-radius: 12px;
+    padding: 10px 14px;
+    margin: 6px 0;
+    white-space: normal;
+    display: none;
 }

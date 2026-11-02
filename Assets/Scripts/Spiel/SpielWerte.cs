@@ -61,8 +61,22 @@ namespace Ocean
         public float schlauchLaenge = 8f;
         [Tooltip("Preis je Meter Rohr.")]
         public float rohrPreisProMeter = 4f;
+        [Tooltip("So viele Meter Rohr gibt es pro Kauf.")]
+        public int rohrPaket = 10;
         [Tooltip("Längstes Rohrstück, das man auf einmal legen kann (m).")]
         public float rohrMaxLaenge = 20f;
+
+        [Header("Inventar und Lager")]
+        [Tooltip("Plätze im Rucksack (dazu kommen 7 Plätze der Schnellleiste).")]
+        public int rucksackPlaetze = 20;
+        [Tooltip("Plätze in einer Kiste.")]
+        public int kistenPlaetze = 24;
+        public float kistePreis = 300f;
+        [Tooltip("Höchstzahl pro Stapel.")]
+        public int stapelPumpe = 10;
+        [Tooltip("Höchstzahl Meter pro Rohr-Stapel.")]
+        public int stapelRohr = 100;
+        public int stapelKiste = 5;
 
         [Header("Rakete")]
         public float raketeLadung = 200f;
