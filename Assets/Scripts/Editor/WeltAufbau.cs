@@ -26,7 +26,7 @@ namespace Ocean.EditorWerkzeuge
             WeltDaten daten = DatenLadenOderAnlegen();
 
             // Alte Welt, alten Spieler und die Standardkamera der Vorlage entfernen
-            foreach (string name in new[] { "Welt", "Spieler", "Main Camera", "Startpunkte", "Menuekamera", "Netzwerk", "Oberflaeche", "Startrampe", "Spielstand" })
+            foreach (string name in new[] { "Welt", "Spieler", "Main Camera", "Startpunkte", "Menuekamera", "Netzwerk", "Oberflaeche", "Startrampe", "Shopgebaeude", "Spielstand", "Mars" })
             {
                 var alt = GameObject.Find(name);
                 if (alt != null) Object.DestroyImmediate(alt);
@@ -90,6 +90,7 @@ namespace Ocean.EditorWerkzeuge
             SpielWerte werte = WerteLadenOderAnlegen();
             PalmenAnlegen(daten, welt.transform);
             StartrampeAnlegen(daten, werte);
+            ShopgebaeudeAnlegen(daten);
             var handpumpe = PumpenVorlageErstellen(Pumpe.Art.Hand, werte);
             var motorpumpe = PumpenVorlageErstellen(Pumpe.Art.Motor, werte);
             var spielstandObjekt = new GameObject("Spielstand");
@@ -102,7 +103,10 @@ namespace Ocean.EditorWerkzeuge
             spielstand.rohrVorlage = rohr;
             var kiste = KistenVorlageErstellen(werte);
             spielstand.kisteVorlage = kiste;
-            NetzwerkAnlegen(daten, SpielerVorlageErstellen(werte), new[] { handpumpe, motorpumpe, rohr, kiste });
+            var schuessel = SchuesselVorlageErstellen();
+            spielstand.schuesselVorlage = schuessel;
+            MarsAnlegen(werte);
+            NetzwerkAnlegen(daten, SpielerVorlageErstellen(werte), new[] { handpumpe, motorpumpe, rohr, kiste, schuessel });
             OptikAufbau.Anwenden(welt.transform);
 
             EditorSceneManager.MarkSceneDirty(welt.scene);
@@ -136,6 +140,7 @@ namespace Ocean.EditorWerkzeuge
                 float x = Mathf.Cos(winkel) * abstand, z = Mathf.Sin(winkel) * abstand;
                 if (x > 0f && Mathf.Abs(z) < 4f) continue; // Weg vom Start zum Steg (+X) freihalten
                 if (new Vector2(x - RampeX, z).magnitude < 7f) continue; // Platz für die Startrampe
+                if (new Vector2(x - ShopX, z - ShopZ).magnitude < 6f) continue; // Platz für das Shop-Gebäude
 
                 Vector3 fuss = KugelGenerator.PunktAufBoden(daten, x, z, -0.2f, out Vector3 oben);
                 var palme = new GameObject($"Palme {gesetzt + 1}");
@@ -338,6 +343,7 @@ namespace Ocean.EditorWerkzeuge
             oberflaeche.gameObject.AddComponent<Anzeige>().oberflaeche = oberflaeche;
             oberflaeche.gameObject.AddComponent<ShopFenster>().oberflaeche = oberflaeche;
             oberflaeche.gameObject.AddComponent<InventarFenster>().oberflaeche = oberflaeche;
+            oberflaeche.gameObject.AddComponent<BildschirmAnzeige>().oberflaeche = oberflaeche;
         }
 
         static PanelSettings PanelEinstellungenHolen()
@@ -360,6 +366,53 @@ namespace Ocean.EditorWerkzeuge
         }
 
         const float RampeX = -3f; // Startrampe fast in der Inselmitte
+        const float ShopX = 2.5f, ShopZ = -8.5f; // Shop-Gebäude seitlich der Startrampe
+
+        /// <summary>
+        /// Shop-Gebäude: offene Holzhütte mit Dach, Schild und Tresen vorn (Tresen = Ziel für E).
+        /// Fester Szenenteil ohne Netzwerk-Objekt; der Zustand (Kasse, Forschung) liegt im Spielstand.
+        /// </summary>
+        static void ShopgebaeudeAnlegen(WeltDaten daten)
+        {
+            Vector3 boden = KugelGenerator.PunktAufBoden(daten, ShopX, ShopZ, 0f, out Vector3 oben);
+            var haus = new GameObject("Shopgebaeude");
+            Vector3 zurMitte = Vector3.ProjectOnPlane(new Vector3(-ShopX, 0f, -ShopZ), oben);
+            haus.transform.SetPositionAndRotation(boden, Quaternion.LookRotation(zurMitte, oben));
+            var t = haus.transform;
+
+            var holz = MaterialHolen("Holz", new Color(0.36f, 0.24f, 0.14f), false);
+            var hell = MaterialHolen("Kistenholz", new Color(0.62f, 0.44f, 0.26f), false);
+            var grau = MaterialHolen("Metall", new Color(0.55f, 0.58f, 0.62f), false);
+            var tuerkis = MaterialHolen("Tuerkis", new Color(0.06f, 0.66f, 0.72f), false);
+
+            // Wände reichen ein Stück in den Boden (Insel ist gewölbt)
+            Kasten("Rueckwand", t, new Vector3(0f, 1.0f, -1.8f), new Vector3(5.2f, 2.6f, 0.2f), holz);
+            Kasten("Wand links", t, new Vector3(-2.5f, 1.0f, 0f), new Vector3(0.2f, 2.6f, 3.8f), holz);
+            Kasten("Wand rechts", t, new Vector3(2.5f, 1.0f, 0f), new Vector3(0.2f, 2.6f, 3.8f), holz);
+            Teil(PrimitiveType.Cube, "Dach", t, new Vector3(0f, 2.4f, 0.1f), new Vector3(6f, 0.2f, 4.6f), grau);
+            Teil(PrimitiveType.Cube, "Schild", t, new Vector3(0f, 2.95f, 2.0f), new Vector3(3.6f, 0.7f, 0.12f), tuerkis);
+            Teil(PrimitiveType.Sphere, "Muenze", t, new Vector3(0f, 2.95f, 2.1f), new Vector3(0.5f, 0.5f, 0.08f), MaterialHolen("Akzent", new Color(0.98f, 0.78f, 0.20f), false));
+            // Pfosten vorn, damit das Dach getragen aussieht
+            Kasten("Pfosten links", t, new Vector3(-2.5f, 1.0f, 2.0f), new Vector3(0.25f, 2.6f, 0.25f), holz);
+            Kasten("Pfosten rechts", t, new Vector3(2.5f, 1.0f, 2.0f), new Vector3(0.25f, 2.6f, 0.25f), holz);
+            // Tresen vorn in der Mitte; seitlich bleibt Platz zum Hineingehen
+            var tresen = Kasten("Tresen", t, new Vector3(0f, 0.2f, 2.0f), new Vector3(3.0f, 1.2f, 0.7f), hell);
+            Teil(PrimitiveType.Cube, "Tresenplatte", t, new Vector3(0f, 0.85f, 2.0f), new Vector3(3.2f, 0.1f, 0.9f), holz);
+            // Regal mit ein paar Kisten an der Rückwand
+            Teil(PrimitiveType.Cube, "Regal", t, new Vector3(0f, 1.0f, -1.55f), new Vector3(3.4f, 0.1f, 0.4f), hell);
+            for (int i = 0; i < 4; i++)
+                Teil(PrimitiveType.Cube, $"Ware {i + 1}", t, new Vector3(-1.2f + i * 0.8f, 1.3f, -1.55f), new Vector3(0.45f, 0.4f, 0.35f), i % 2 == 0 ? tuerkis : hell);
+
+            haus.AddComponent<Shopgebaeude>().tresen = tresen.GetComponent<Collider>();
+        }
+
+        /// <summary>Quader mit Kollision.</summary>
+        static Renderer Kasten(string name, Transform eltern, Vector3 position, Vector3 groesse, Material material)
+        {
+            var teil = Teil(PrimitiveType.Cube, name, eltern, position, groesse, material);
+            teil.gameObject.AddComponent<BoxCollider>();
+            return teil;
+        }
 
         /// <summary>
         /// Startrampe: runde Plattform mit Rakete, daneben Tank (Eimer leeren) und Startknopf.
@@ -541,6 +594,61 @@ namespace Ocean.EditorWerkzeuge
             var vorlage = PrefabUtility.SaveAsPrefabAsset(kiste, "Assets/Vorlagen/Kiste.prefab");
             Object.DestroyImmediate(kiste);
             return vorlage;
+        }
+
+        /// <summary>Satellitenschüssel: Sockel, Mast, drehbarer Kopf mit Schüssel und Empfänger.</summary>
+        static GameObject SchuesselVorlageErstellen()
+        {
+            if (!AssetDatabase.IsValidFolder("Assets/Vorlagen")) AssetDatabase.CreateFolder("Assets", "Vorlagen");
+            var weiss = MaterialHolen("Anzug", new Color(0.93f, 0.93f, 0.95f), false);
+            var grau = MaterialHolen("Metall", new Color(0.55f, 0.58f, 0.62f), false);
+            var tuerkis = MaterialHolen("Tuerkis", new Color(0.06f, 0.66f, 0.72f), false);
+
+            var objekt = new GameObject("Satellitenschuessel");
+            var t = objekt.transform;
+            Teil(PrimitiveType.Cylinder, "Sockel", t, new Vector3(0f, 0.08f, 0f), new Vector3(0.7f, 0.08f, 0.7f), grau);
+            Teil(PrimitiveType.Cylinder, "Mast", t, new Vector3(0f, 0.7f, 0f), new Vector3(0.12f, 0.6f, 0.12f), grau);
+            var kopf = new GameObject("Kopf").transform;
+            kopf.SetParent(t, false);
+            kopf.localPosition = new Vector3(0f, 1.35f, 0f);
+            Teil(PrimitiveType.Sphere, "Schuessel", kopf, new Vector3(0f, 0f, 0.05f), new Vector3(1.3f, 1.3f, 0.28f), weiss);
+            Teil(PrimitiveType.Cylinder, "Arm", kopf, new Vector3(0f, 0f, 0.45f), new Vector3(0.04f, 0.4f, 0.04f), grau)
+                .transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            Teil(PrimitiveType.Sphere, "Empfaenger", kopf, new Vector3(0f, 0f, 0.85f), Vector3.one * 0.14f, tuerkis);
+            var kollision = objekt.AddComponent<BoxCollider>();
+            kollision.center = new Vector3(0f, 1f, 0f);
+            kollision.size = new Vector3(1.3f, 2f, 1.3f);
+
+            objekt.AddComponent<NetworkObject>();
+            objekt.AddComponent<Schuessel>().kopf = kopf;
+
+            var vorlage = PrefabUtility.SaveAsPrefabAsset(objekt, "Assets/Vorlagen/Satellitenschuessel.prefab");
+            Object.DestroyImmediate(objekt);
+            return vorlage;
+        }
+
+        /// <summary>Mars-Objekt: das Gelände entsteht im Spiel aus den Spiel-Werten; hier nur Materialien.</summary>
+        static void MarsAnlegen(SpielWerte werte)
+        {
+            OrdnerSicherstellen();
+            const string pfad = GeneriertOrdner + "/Marsboden.mat";
+            var boden = AssetDatabase.LoadAssetAtPath<Material>(pfad);
+            var shader = Shader.Find("Ocean/Vertexfarbe");
+            if (shader == null) Debug.LogWarning("Ocean: Shader „Ocean/Vertexfarbe“ nicht gefunden.");
+            if (boden == null)
+            {
+                boden = new Material(shader != null ? shader : Shader.Find("Universal Render Pipeline/Unlit"));
+                AssetDatabase.CreateAsset(boden, pfad);
+            }
+            else if (shader != null) boden.shader = shader;
+            EditorUtility.SetDirty(boden);
+
+            var mars = new GameObject("Mars").AddComponent<Mars>();
+            mars.werte = werte;
+            mars.bodenMaterial = boden;
+            mars.wasserMaterial = DurchsichtigUnbeleuchtet("Marswasser", new Color(0.10f, 0.50f, 0.78f, 0.88f));
+            mars.himmelMaterial = DurchsichtigUnbeleuchtet("MarsHimmel", new Color(0.95f, 0.58f, 0.40f, 0.95f));
+            mars.weissMaterial = MaterialHolen("Anzug", new Color(0.93f, 0.93f, 0.95f), false);
         }
 
         static MeshFilter SchlauchObjekt(string name, Transform eltern, Material material)

@@ -215,12 +215,14 @@ namespace Ocean
             Gegenstand.Motorpumpe => new Color(0.95f, 0.62f, 0.18f),
             Gegenstand.Rohr => new Color(0.62f, 0.66f, 0.70f),
             Gegenstand.Kiste => new Color(0.55f, 0.38f, 0.22f),
+            Gegenstand.Bildschirm => new Color(0.20f, 0.24f, 0.30f),
+            Gegenstand.Schuessel => new Color(0.86f, 0.36f, 0.22f),
             _ => Leer,
         };
 
         static void Zeigen(PlatzAnsicht p, Stapel s)
         {
-            p.name.text = s.Leer ? "" : GegenstandInfo.Name(s.art);
+            p.name.text = s.Leer ? "" : GegenstandInfo.Kurzname(s.art);
             p.menge.text = GegenstandInfo.Menge(s);
             p.farbe.style.backgroundColor = s.Leer ? Leer : Farbe(s.art);
         }
@@ -262,7 +264,7 @@ namespace Ocean
             gezogen = p;
             p.element.AddToClassList("platz--gezogen");
             var s = lager.Platz(p.platz);
-            ((Label)geist).text = $"{GegenstandInfo.Name(s.art)}\n{GegenstandInfo.Menge(s)}";
+            ((Label)geist).text = $"{GegenstandInfo.Kurzname(s.art)}\n{GegenstandInfo.Menge(s)}";
             geist.style.display = DisplayStyle.Flex;
             GeistSetzen(e.position);
         }

@@ -4,7 +4,7 @@ using Unity.Netcode;
 namespace Ocean
 {
     /// <summary>Alles, was im Inventar oder in einer Kiste liegen kann.</summary>
-    public enum Gegenstand : byte { Nichts = 0, Handpumpe = 1, Motorpumpe = 2, Rohr = 3, Kiste = 4 }
+    public enum Gegenstand : byte { Nichts = 0, Handpumpe = 1, Motorpumpe = 2, Rohr = 3, Kiste = 4, Bildschirm = 5, Schuessel = 6 }
 
     /// <summary>Ein Platz im Lager: welcher Gegenstand und wie viele (bei Rohr: Meter).</summary>
     public struct Stapel : INetworkSerializeByMemcpy, IEquatable<Stapel>
@@ -28,8 +28,13 @@ namespace Ocean
             Gegenstand.Motorpumpe => "Motorpumpe",
             Gegenstand.Rohr => "Rohr",
             Gegenstand.Kiste => "Kiste",
+            Gegenstand.Bildschirm => "Bildschirm",
+            Gegenstand.Schuessel => "Satellitenschüssel",
             _ => "",
         };
+
+        /// <summary>Kurzer Name für die kleinen Plätze im Inventar.</summary>
+        public static string Kurzname(Gegenstand g) => g == Gegenstand.Schuessel ? "Sat-Schüssel" : Name(g);
 
         /// <summary>Menge als Text, z. B. „3“ oder „40 m“.</summary>
         public static string Menge(Stapel s) => s.Leer ? "" : s.art == Gegenstand.Rohr ? $"{s.menge} m" : $"{s.menge}";
@@ -42,12 +47,13 @@ namespace Ocean
                 Gegenstand.Handpumpe or Gegenstand.Motorpumpe => w != null ? w.stapelPumpe : 10,
                 Gegenstand.Rohr => w != null ? w.stapelRohr : 100,
                 Gegenstand.Kiste => w != null ? w.stapelKiste : 5,
+                Gegenstand.Bildschirm or Gegenstand.Schuessel => w != null ? w.stapelGeraet : 5,
                 _ => 0,
             };
         }
 
-        /// <summary>Wird aus der Schnellleiste heraus aufgestellt bzw. verlegt.</summary>
-        public static bool Platzierbar(Gegenstand g) => g != Gegenstand.Nichts;
+        /// <summary>Wird aus der Schnellleiste heraus aufgestellt bzw. verlegt (der Bildschirm wird nur gehalten).</summary>
+        public static bool Platzierbar(Gegenstand g) => g != Gegenstand.Nichts && g != Gegenstand.Bildschirm;
 
         /// <summary>Shop-Eintrag, über den man den Gegenstand kauft.</summary>
         public static Gegenstand AusUpgrade(Upgrade u) => u switch
@@ -56,6 +62,8 @@ namespace Ocean
             Upgrade.Motorpumpe => Gegenstand.Motorpumpe,
             Upgrade.Rohr => Gegenstand.Rohr,
             Upgrade.Kiste => Gegenstand.Kiste,
+            Upgrade.Bildschirm => Gegenstand.Bildschirm,
+            Upgrade.Schuessel => Gegenstand.Schuessel,
             _ => Gegenstand.Nichts,
         };
     }

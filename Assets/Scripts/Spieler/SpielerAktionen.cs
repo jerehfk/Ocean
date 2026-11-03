@@ -110,6 +110,15 @@ namespace Ocean
                 return;
             }
 
+            // 0b. Tresen im Shop-Gebäude
+            var haus = Shopgebaeude.Instanz;
+            if (trifft && haus != null && treffer.collider == haus.tresen)
+            {
+                Hinweis = "E: Shop öffnen";
+                if (Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame) ShopFenster.OeffnenAmTresen();
+                return;
+            }
+
             // 1. Tank an der Startrampe
             if (trifft && rampe != null && treffer.collider == rampe.tankZiel)
             {
@@ -151,7 +160,7 @@ namespace Ocean
                 }
                 if (!pumpe.Verbunden)
                 {
-                    Hinweis = "Nicht mit dem Tank verbunden – Rohr verlegen (Shop: B) · E: Saugschlauch umlegen";
+                    Hinweis = "Nicht mit dem Tank verbunden – Rohr verlegen (Shop-Gebäude) · E: Saugschlauch umlegen";
                     if (taste) SchlauchNehmen(pumpe);
                     return;
                 }

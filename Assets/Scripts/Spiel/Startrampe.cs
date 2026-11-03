@@ -29,6 +29,8 @@ namespace Ocean
         public readonly NetworkVariable<float> flugDauer = new NetworkVariable<float>();
 
         Vector3 raketeRuhe;
+        float ladungUnterwegs;   // nur Host: Liter der fliegenden Rakete, kommen bei der Landung auf dem Mars an
+        bool gelandet = true;
         const float Steigzeit = 8f;          // so lange sieht man Start bzw. Landung (höchstens die halbe Flugzeit)
         const float Beschleunigung = 12f;    // m/s² beim Aufstieg
 
@@ -56,6 +58,8 @@ namespace Ocean
             var stand = Spielstand.Instanz;
             float ladung = Mathf.Min(tankLiter.Value, stand != null ? stand.RaketenLadung : werte.raketeLadung);
             tankLiter.Value -= ladung;
+            ladungUnterwegs = ladung;
+            gelandet = false;
             flugDauer.Value = stand != null ? stand.RaketenFlugzeit : werte.raketeFlugzeit;
             restFlugzeit.Value = flugDauer.Value;
             if (Spielstand.Instanz != null) Spielstand.Instanz.Einnahme(ladung * werte.preisProLiter);
@@ -66,6 +70,12 @@ namespace Ocean
             // Spielzeit (Time.deltaTime) – steht im Einzelspieler-Pausemenü still
             if (IsSpawned && IsServer && restFlugzeit.Value > 0f)
                 restFlugzeit.Value = Mathf.Max(0f, restFlugzeit.Value - Time.deltaTime);
+            // Halbe Flugzeit vorbei: Rakete landet auf dem Mars, das Wasser kommt an
+            if (IsSpawned && IsServer && !gelandet && restFlugzeit.Value <= flugDauer.Value * 0.5f)
+            {
+                gelandet = true;
+                if (Spielstand.Instanz != null) Spielstand.Instanz.MarsAnkunft(ladungUnterwegs);
+            }
             RaketeAnzeigen();
         }
 

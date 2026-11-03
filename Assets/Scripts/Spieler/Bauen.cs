@@ -25,7 +25,7 @@ namespace Ocean
 
         public string Hinweis { get; private set; } = "";
 
-        int art = -1;             // 0 = Handpumpe, 1 = Motorpumpe, 2 = Rohr, 3 = Kiste, -1 = nicht im Baumodus
+        int art = -1;             // 0 = Handpumpe, 1 = Motorpumpe, 2 = Rohr, 3 = Kiste, 4 = Satellitenschüssel, -1 = nicht im Baumodus
         int platz = -1;           // Schnellleisten-Platz im Inventar, aus dem gebaut wird
         GameObject vorschau;
         MeshRenderer[] vorschauTeile;
@@ -48,6 +48,7 @@ namespace Ocean
             Gegenstand.Motorpumpe => 1,
             Gegenstand.Rohr => 2,
             Gegenstand.Kiste => 3,
+            Gegenstand.Schuessel => 4,
             _ => -1,
         };
 
@@ -75,7 +76,13 @@ namespace Ocean
                 rohrAnfangGesetzt = false;
                 return;
             }
-            var vorlage = art == 0 ? stand.handpumpeVorlage : art == 1 ? stand.motorpumpeVorlage : stand.kisteVorlage;
+            var vorlage = art switch
+            {
+                0 => stand.handpumpeVorlage,
+                1 => stand.motorpumpeVorlage,
+                3 => stand.kisteVorlage,
+                _ => stand.schuesselVorlage,
+            };
             if (vorlage == null) { art = -1; return; }
             vorschau = VorschauBauen(vorlage);
         }
@@ -111,7 +118,7 @@ namespace Ocean
             var schwerkraft = PlanetSchwerkraft.Instanz;
             var lager = Lager.Lokal;
             int vorrat = lager != null ? lager.Platz(platz).menge : 0;
-            string name = art == 0 ? "Handpumpe" : art == 1 ? "Motorpumpe" : "Kiste";
+            string name = art switch { 0 => "Handpumpe", 1 => "Motorpumpe", 3 => "Kiste", _ => "Satellitenschüssel" };
 
             var strahl = new Ray(kamera.transform.position, kamera.transform.forward);
             if (!Physics.Raycast(strahl, out RaycastHit treffer, bauReichweite, ~0, QueryTriggerInteraction.Ignore))
@@ -127,7 +134,7 @@ namespace Ocean
             // Die Richtung ist ein Mittelwert über viele Messpunkte (zeigt quer zur Uferlinie)
             // und wird zeitlich geglättet, damit die Vorschau nicht hin- und herspringt.
             // Kiste: Vorderseite zum Spieler. Pumpe: Einlass zum Wasser.
-            Vector3 ziel = art == 3 ? Vector3.ProjectOnPlane(-kamera.transform.forward, oben).normalized : WasserRichtung(position, oben);
+            Vector3 ziel = art >= 3 ? Vector3.ProjectOnPlane(-kamera.transform.forward, oben).normalized : WasserRichtung(position, oben);
             if (ziel.sqrMagnitude < 0.001f) ziel = Vector3.ProjectOnPlane(kamera.transform.forward, oben).normalized;
             if (blickZumWasser.sqrMagnitude < 0.001f) blickZumWasser = ziel;
             blickZumWasser = Vector3.Slerp(blickZumWasser, ziel, 1f - Mathf.Exp(-8f * Time.unscaledDeltaTime));
@@ -136,7 +143,7 @@ namespace Ocean
             Quaternion ausrichtung = Quaternion.LookRotation(Quaternion.AngleAxis(drehung, oben) * vor.normalized, oben);
 
             string grund = Pruefen(treffer, position);
-            if (grund == null && vorrat <= 0) grund = $"Keine {name} mehr im Inventar";
+            if (grund == null && vorrat <= 0) grund = $"Kein Vorrat mehr ({name})";
             bool erlaubt = grund == null;
 
             vorschau.SetActive(true);

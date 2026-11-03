@@ -15,6 +15,13 @@
                 <ui:Label name="tankText" class="rampe-zeile" picking-mode="Ignore" />
                 <ui:Label name="raketeText" class="rampe-zeile" picking-mode="Ignore" />
             </ui:VisualElement>
+            <ui:VisualElement name="bildschirmHand" class="bildschirm-hand" picking-mode="Ignore">
+                <ui:VisualElement class="bildschirm-flaeche" picking-mode="Ignore">
+                    <ui:VisualElement name="bildschirmBild" class="bildschirm-bild" picking-mode="Ignore" />
+                    <ui:Label name="bildschirmStatus" class="bildschirm-status" picking-mode="Ignore" />
+                </ui:VisualElement>
+                <ui:Label name="bildschirmInfo" class="bildschirm-info" picking-mode="Ignore" />
+            </ui:VisualElement>
             <ui:VisualElement name="schnellleiste" class="schnellleiste" picking-mode="Ignore" />
         </ui:VisualElement>
 
@@ -68,7 +75,7 @@
             <ui:Label name="geist" class="platz-geist" picking-mode="Ignore" />
         </ui:VisualElement>
 
-        <!-- Shop (B) -->
+        <!-- Shop (Tresen im Shop-Gebäude, E) -->
         <ui:VisualElement name="shop" class="bildschirm bildschirm--abgedunkelt">
             <ui:VisualElement class="karte shop-karte">
                 <ui:VisualElement class="shop-kopf">
@@ -77,7 +84,7 @@
                 </ui:VisualElement>
                 <ui:Label name="shopMeldung" class="shop-meldung" />
                 <ui:ScrollView name="shopListe" class="shop-liste" />
-                <ui:Button name="shopSchliessen" text="Schließen (B)" class="knopf knopf--leise" />
+                <ui:Button name="shopSchliessen" text="Schließen (Esc)" class="knopf knopf--leise" />
             </ui:VisualElement>
         </ui:VisualElement>
 
