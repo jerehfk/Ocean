@@ -180,6 +180,31 @@
     text-shadow: 0 2px 6px rgba(0, 30, 45, 0.8);
 }
 
+.satellit-status {
+    position: absolute;
+    top: 86px;
+    left: 0; right: 0;
+    font-size: 20px;
+    -unity-font-style: bold;
+    color: rgb(255, 255, 255);
+    -unity-text-align: middle-center;
+    text-shadow: 0 2px 6px rgba(0, 30, 45, 0.8);
+}
+
+.satellit-banner {
+    position: absolute;
+    top: 18%;
+    left: 20%; right: 20%;
+    padding: 18px 28px;
+    font-size: 30px;
+    -unity-font-style: bold;
+    color: rgb(255, 255, 255);
+    -unity-text-align: middle-center;
+    white-space: normal;
+    background-color: rgba(6, 100, 118, 0.88);
+    border-radius: 24px;
+}
+
 .rampe-info {
     position: absolute;
     right: 28px;

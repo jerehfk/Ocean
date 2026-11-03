@@ -10,6 +10,8 @@
             </ui:VisualElement>
             <ui:VisualElement class="fadenkreuz" picking-mode="Ignore" />
             <ui:Label name="hinweis" class="hinweis-mitte" picking-mode="Ignore" />
+            <ui:Label name="satellitStatus" class="satellit-status" picking-mode="Ignore" />
+            <ui:Label name="satellitBanner" class="satellit-banner" picking-mode="Ignore" />
             <ui:VisualElement name="rampeInfo" class="rampe-info" picking-mode="Ignore">
                 <ui:Label text="Startrampe" class="rampe-titel" picking-mode="Ignore" />
                 <ui:Label name="tankText" class="rampe-zeile" picking-mode="Ignore" />

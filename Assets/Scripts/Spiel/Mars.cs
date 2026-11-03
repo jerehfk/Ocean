@@ -317,7 +317,7 @@ namespace Ocean
 
         void SatellitBauen()
         {
-            Bild = new RenderTexture(1280, 720, 24) { name = "Satellitenbild" };
+            Bild = new RenderTexture(1280, 720, 24) { name = "Satellitenbild", antiAliasing = 4 };
             Bild.Create();
             var objekt = new GameObject("Satellitenkamera");
             objekt.transform.SetParent(transform, false);
@@ -334,8 +334,9 @@ namespace Ocean
         Transform RaketeBauen()
         {
             var wurzel = new GameObject("Satelliten-Rakete").transform;
-            Teil(PrimitiveType.Cylinder, "Rumpf", wurzel, weissMaterial, new Vector3(0f, 0.8f, 0f), new Vector3(0.35f, 0.8f, 0.35f));
-            Teil(PrimitiveType.Sphere, "Spitze", wurzel, weissMaterial, new Vector3(0f, 1.65f, 0f), new Vector3(0.35f, 0.5f, 0.35f));
+            // Gut sichtbar: etwa so hoch wie ein Haus (die Rakete der Insel ist ~5 m)
+            Teil(PrimitiveType.Cylinder, "Rumpf", wurzel, weissMaterial, new Vector3(0f, 2.4f, 0f), new Vector3(1.05f, 2.4f, 1.05f));
+            Teil(PrimitiveType.Sphere, "Spitze", wurzel, weissMaterial, new Vector3(0f, 4.95f, 0f), new Vector3(1.05f, 1.5f, 1.05f));
             wurzel.gameObject.SetActive(false);
             return wurzel;
         }
@@ -383,11 +384,11 @@ namespace Ocean
             var rampe = Startrampe.Instanz;
             float vergangen = stand != null && stand.satellitRest.Value > 0f
                 ? stand.satellitFlugdauer.Value - stand.satellitRest.Value : -1f;
-            bool sichtbar = rampe != null && vergangen >= 0f && vergangen < 10f;
+            bool sichtbar = rampe != null && vergangen >= 0f && vergangen < 16f;
             if (satRakete.gameObject.activeSelf != sichtbar) satRakete.gameObject.SetActive(sichtbar);
             if (!sichtbar) return;
 
-            Vector3 boden = rampe.transform.position + rampe.transform.right * 3.5f;
+            Vector3 boden = rampe.transform.position + rampe.transform.right * 5.5f;
             Vector3 hoch = PlanetSchwerkraft.Instanz != null ? PlanetSchwerkraft.Instanz.Oben(boden) : Vector3.up;
             float zuendung = Mathf.Max(0f, vergangen - 1.5f);   // kurz stehen, dann abheben
             satRakete.SetPositionAndRotation(boden + hoch * (0.5f * 14f * zuendung * zuendung),

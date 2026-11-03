@@ -199,7 +199,7 @@ namespace Ocean.EditorWerkzeuge
                 // weil die eigentliche Sandfarbe aus dem Material kommt
                 float flecken = Mathf.PerlinNoise(x * 0.02f, y * 0.02f) * 0.15f
                               + Mathf.PerlinNoise(x * 0.09f + 50f, y * 0.09f) * 0.08f;
-                float korn = (float)zufall.NextDouble() * 0.12f;
+                float korn = (float)zufall.NextDouble() * 0.05f;   // feines Korn, sonst wirkt der Boden körnig-pixelig
                 float wert = 1f - flecken - korn;
                 if (zufall.NextDouble() < 0.006) wert -= 0.35f; // vereinzelte dunkle Steinchen
                 tex.SetPixel(x, y, new Color(wert, wert, wert));
@@ -211,6 +211,8 @@ namespace Ocean.EditorWerkzeuge
 
             var importer = (TextureImporter)AssetImporter.GetAtPath(pfad);
             importer.wrapMode = TextureWrapMode.Repeat;
+            importer.filterMode = FilterMode.Trilinear;
+            importer.anisoLevel = 8;
             importer.SaveAndReimport();
             return AssetDatabase.LoadAssetAtPath<Texture2D>(pfad);
         }
