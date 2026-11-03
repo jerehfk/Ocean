@@ -276,6 +276,9 @@ namespace Ocean.EditorWerkzeuge
             var daten = kamera.GetComponent<UniversalAdditionalCameraData>();
             if (daten == null) daten = kamera.AddComponent<UniversalAdditionalCameraData>();
             daten.renderPostProcessing = true;
+            // Kantenglättung: MSAA (Qualitätsstufe) plus SMAA gegen flimmernde Kanten und Treppen
+            daten.antialiasing = AntialiasingMode.SubpixelMorphologicalAntiAliasing;
+            daten.antialiasingQuality = AntialiasingQuality.High;
         }
 
         static Renderer Teil(PrimitiveType form, string name, Transform eltern, Vector3 position, Vector3 groesse, Material material)
