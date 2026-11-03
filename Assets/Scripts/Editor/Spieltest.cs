@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using Unity.Netcode;
+using Unity.Netcode.Transports.UTP;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -52,7 +53,7 @@ namespace Ocean.EditorWerkzeuge
             while (!EditorApplication.isPlaying || NetworkManager.Singleton == null) yield return null;
             yield return Frames(5);
             Application.logMessageReceived += LogAbfangen;   // erst ab hier: Editor-Eigenmeldungen (Suchindex) ignorieren
-            NetworkManager.Singleton.StartHost();
+            Hosten();
             float t = 0;
             while ((Spielstand.Instanz == null || !Spielstand.Instanz.IsSpawned || Lager.Lokal == null) && t < 20f)
             {
@@ -133,12 +134,19 @@ namespace Ocean.EditorWerkzeuge
             Beenden();
         }
 
+        /// <summary>Host auf eigenem Port, damit der Test nicht mit einem laufenden Spiel (7777) kollidiert.</summary>
+        static void Hosten()
+        {
+            NetworkManager.Singleton.GetComponent<UnityTransport>().SetConnectionData("127.0.0.1", 17777);
+            NetworkManager.Singleton.StartHost();
+        }
+
         static IEnumerator MarsAblauf()
         {
             while (!EditorApplication.isPlaying || NetworkManager.Singleton == null) yield return null;
             yield return Frames(5);
             Application.logMessageReceived += LogAbfangen;
-            NetworkManager.Singleton.StartHost();
+            Hosten();
             float t = 0;
             while ((Spielstand.Instanz == null || !Spielstand.Instanz.IsSpawned || Lager.Lokal == null) && t < 20f)
             {
@@ -169,8 +177,11 @@ namespace Ocean.EditorWerkzeuge
             Pruefen(stand.SatellitGestartet && !stand.SatellitAngekommen && stand.satellitRest.Value > 0f, "Erster Bildschirm startet den Satelliten");
             Pruefen(vorher - stand.kasse.Value == stand.werte.bildschirmPreisErster, "Erster Bildschirm kostet den Einstiegspreis");
 
-            yield return Frames(60);
-            Pruefen(stand.satellitRest.Value < stand.satellitFlugdauer.Value, "Satellit fliegt (Restzeit sinkt)");
+            for (int i = 0; i < 60; i++) yield return null;
+            // Im Batchmode ist die Maus nie „gefangen“ → das Spiel gilt als pausiert (Einzelspieler) und die Spielzeit steht.
+            bool pausiert = Time.timeScale == 0f;
+            bool sinkt = stand.satellitRest.Value < stand.satellitFlugdauer.Value;
+            Pruefen(pausiert ? !sinkt : sinkt, pausiert ? "Satellit wartet im Pausemenü (Spielzeit steht)" : "Satellit fliegt (Restzeit sinkt)");
 
             stand.GegenstandKaufenRpc((int)Upgrade.Bildschirm);
             yield return Frames(5);
